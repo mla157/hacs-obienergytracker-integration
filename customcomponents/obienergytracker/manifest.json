@@ -1,0 +1,12 @@
+{
+  "domain": "obi_energy_tracker",
+  "name": "OBI ENERGY TRACKER",
+  "codeowners": [
+    "@mla157"
+  ],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/obi_energy_tracker",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "requirements": []
+}

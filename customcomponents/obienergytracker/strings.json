@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Obi EnergyTracker",
+        "description": "Enter your Obi account credentials and device information",
+        "data": {
+          "email": "Email address",
+          "password": "Password",
+          "country": "Country code",
+          "bridge_id": "Bridge ID",
+          "device_id": "Device ID"
+        },
+        "data_description": {
+          "email": "Your Obi account email",
+          "password": "Your Obi account password",
+          "country": "The country where your device is registered (e.g., DE)",
+          "bridge_id": "The ID of your Obi bridge",
+          "device_id": "The ID of your Obi meter device"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password",
+      "connection_error": "Failed to connect to Obi EnergyTracker service"
+    },
+    "abort": {
+      "already_configured": "Account is already configured"
+    },
+    "create_entry": {
+      "default": "Successfully connected to Obi EnergyTracker"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meter_reading": {
+        "name": "Zählerstand"
+      }
+    }
+  }
+}
+

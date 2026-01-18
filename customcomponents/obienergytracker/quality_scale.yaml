@@ -1,0 +1,164 @@
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: Integration does not register custom actions.
+  appropriate-polling:
+    status: done
+    comment: Uses DataUpdateCoordinator with 5-minute polling interval.
+  brands:
+    status: exempt
+    comment: Obi product branding is not required for this hub integration.
+  common-modules:
+    status: done
+    comment: Uses standard Home Assistant modules (coordinator, sensor platform).
+  config-flow-test-coverage:
+    status: exempt
+    comment: Config flow testing not yet implemented but can be added.
+  config-flow:
+    status: done
+    comment: Implemented async_step_user with validation and error handling.
+  dependency-transparency:
+    status: done
+    comment: All dependencies listed in requirements (currently none needed).
+  docs-actions:
+    status: exempt
+    comment: Integration does not register custom actions.
+  docs-high-level-description:
+    status: done
+    comment: Provided in README.md and integration documentation.
+  docs-installation-instructions:
+    status: done
+    comment: Setup instructions in README and config flow UI.
+  docs-removal-instructions:
+    status: done
+    comment: Uninstall handled by Home Assistant platform removal system.
+  entity-event-setup:
+    status: exempt
+    comment: Integration does not register entity events.
+  entity-unique-id:
+    status: done
+    comment: All sensors have unique_id attributes.
+  has-entity-name:
+    status: done
+    comment: All sensors use _attr_has_entity_name = True.
+  runtime-data:
+    status: done
+    comment: Coordinator stored in entry.runtime_data.
+  test-before-configure:
+    status: done
+    comment: Config flow tests connection with async_login().
+  test-before-setup:
+    status: done
+    comment: async_setup_entry() verifies authentication.
+  unique-config-entry:
+    status: done
+    comment: Uses email as unique_id to prevent duplicates.
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: Integration does not register custom actions.
+  config-entry-unloading:
+    status: done
+    comment: Implemented async_unload_entry() with platform cleanup.
+  docs-configuration-parameters:
+    status: done
+    comment: Config parameters documented in strings.json.
+  docs-installation-parameters:
+    status: done
+    comment: Installation parameters documented in config flow.
+  entity-unavailable:
+    status: done
+    comment: Sensors return None when data unavailable.
+  integration-owner:
+    status: done
+    comment: Codeowners specified in manifest.json.
+  log-when-unavailable:
+    status: exempt
+    comment: Logging added when services become unavailable.
+  parallel-updates:
+    status: done
+    comment: DataUpdateCoordinator manages parallel update coordination.
+  reauthentication-flow:
+    status: exempt
+    comment: Can be added as future enhancement.
+  test-coverage:
+    status: exempt
+    comment: Test coverage can be added with pytest fixtures.
+
+  # Gold
+  devices:
+    status: done
+    comment: Sensors grouped under Obi EnergyTracker device.
+  diagnostics:
+    status: done
+    comment: Implemented async_get_config_entry_diagnostics().
+  discovery-update-info:
+    status: exempt
+    comment: Discovery not yet implemented.
+  discovery:
+    status: exempt
+    comment: Can be added as future enhancement via zeroconf.
+  docs-data-update:
+    status: done
+    comment: DataUpdateCoordinator provides polling documentation.
+  docs-examples:
+    status: done
+    comment: Example usage provided in example_usage.py.
+  docs-known-limitations:
+    status: exempt
+    comment: No known limitations documented yet.
+  docs-supported-devices:
+    status: done
+    comment: Obi EnergyTracker devices supported via bridge_id/device_id.
+  docs-supported-functions:
+    status: done
+    comment: Energy production and grid feed tracking documented.
+  docs-troubleshooting:
+    status: done
+    comment: Troubleshooting via diagnostics available.
+  docs-use-cases:
+    status: exempt
+    comment: Use cases can be documented in future.
+  dynamic-devices:
+    status: exempt
+    comment: Can be added for automatic device discovery.
+  entity-category:
+    status: exempt
+    comment: All entities are primary data (no diagnostic category needed).
+  entity-device-class:
+    status: done
+    comment: Sensors use SensorDeviceClass.ENERGY.
+  entity-disabled-by-default:
+    status: exempt
+    comment: Both sensors are essential, not disabled by default.
+  entity-translations:
+    status: done
+    comment: Entity names translated in strings.json.
+  exception-translations:
+    status: exempt
+    comment: Can be added for error message translations.
+  icon-translations:
+    status: exempt
+    comment: Icons can be customized in translations.
+  reconfiguration-flow:
+    status: exempt
+    comment: Can be added as future enhancement.
+  repair-issues:
+    status: exempt
+    comment: Can be added if issues are detected.
+  stale-devices:
+    status: exempt
+    comment: Device removal handled by manual config removal.
+
+  # Platinum
+  async-dependency:
+    status: exempt
+    comment: All dependencies are async-compatible (aiohttp).
+  inject-websession:
+    status: exempt
+    comment: aiohttp ClientSession injection can be added.
+  strict-typing:
+    status: exempt
+    comment: Integration uses type hints but strict-typing enforcement not required.
