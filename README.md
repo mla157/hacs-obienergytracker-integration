@@ -11,10 +11,10 @@ This integration allows you to connect your Obi EnergyTracker solar panel system
 
 ## Installation
 
-1. Place this integration in `homeassistant/components/obienergytracker/`
-2. Restart Home Assistant
-3. Go to Settings → Devices & Services → Create Integration
-4. Search for "Obi EnergyTracker"
+1. Copy the `custom_components/obi_energy_tracker` folder into your Home Assistant's `custom_components` directory.
+2. Restart Home Assistant.
+3. Go to Settings → Devices & Services → Add Integration.
+4. Search for "Obi Energy Tracker".
 5. Enter your Obi account email, password, and country code
 
 ## Configuration
