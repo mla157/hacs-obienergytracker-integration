@@ -1,6 +1,6 @@
-"""Constants for the heyobienergytracker integration."""
+"""Constants for the obienergytracker integration."""
 
-DOMAIN = "heyobienergytracker"
+DOMAIN = "obi_energy_tracker"
 
 # Config constants
 CONF_COUNTRY = "country"

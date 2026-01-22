@@ -14,7 +14,7 @@ rules:
     comment: Uses standard Home Assistant modules (coordinator, sensor platform).
   config-flow-test-coverage:
     status: done
-    comment: Config flow tests implemented in tests/components/heyobienergytracker/test_config_flow.py.
+    comment: Config flow tests implemented in tests/components/obienergytracker/test_config_flow.py.
   config-flow:
     status: done
     comment: Implemented async_step_user with automated bridge discovery and validation.

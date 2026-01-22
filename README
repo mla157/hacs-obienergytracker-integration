@@ -11,7 +11,7 @@ This integration allows you to connect your Obi EnergyTracker solar panel system
 
 ## Installation
 
-1. Place this integration in `homeassistant/components/heyobienergytracker/`
+1. Place this integration in `homeassistant/components/obienergytracker/`
 2. Restart Home Assistant
 3. Go to Settings → Devices & Services → Create Integration
 4. Search for "Obi EnergyTracker"
@@ -54,7 +54,7 @@ data = await api.async_get_hourly_data(
 ## File Structure
 
 ```
-heyobienergytracker/
+obienergytracker/
 ├── __init__.py              # Integration setup and entry point
 ├── api.py                   # API client implementation
 ├── config_flow.py           # Configuration flow for UI setup

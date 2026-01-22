@@ -1,4 +1,4 @@
-"""The heyobienergytracker integration."""
+"""The obienergytracker integration."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ type ObiEnergyTrackerConfigEntry = ConfigEntry[ObiEnergyTrackerCoordinator]
 async def async_setup_entry(
     hass: HomeAssistant, entry: ObiEnergyTrackerConfigEntry
 ) -> bool:
-    """Set up heyobienergytracker from a config entry."""
+    """Set up obienergytracker from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
     # Create API client

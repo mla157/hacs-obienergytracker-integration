@@ -134,7 +134,7 @@ Register custom services for:
 1. **Manual Testing:**
    ```bash
    # Check syntax
-   python3 -m py_compile homeassistant/components/heyobienergytracker/*.py
+   python3 -m py_compile homeassistant/components/obienergytracker/*.py
    ```
 
 2. **Home Assistant Testing:**
@@ -148,8 +148,8 @@ Register custom services for:
    pre-commit run --all-files
 
    # Run linters
-   pylint homeassistant/components/heyobienergytracker
-   mypy homeassistant/components/heyobienergytracker
+   pylint homeassistant/components/obienergytracker
+   mypy homeassistant/components/obienergytracker
    ```
 
 ## Known Limitations
