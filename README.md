@@ -7,7 +7,7 @@ This integration allows you to monitor your **OBI Energy Tracker** device direct
 
 ## OBI Energy Tracker
 
-![Energy Tracker Device](https://www.obi.de/energy-tracker/public/sensor-bridge-CtMOcNw5.png)
+![Energy Tracker Device](https://bilder.obi.de/373328ab-76da-4b09-ab6e-cc9e8dae492e/pr00W/image.jpeg)
 
 The "OBI Energy Tracker" is a low cost device to read out smart energy meters. In default you can access the data in the "heyOBI" application on our smartphone.
 I extracted the API Calls from the backend of the application, and created this "Home Assistant" Integration. 
