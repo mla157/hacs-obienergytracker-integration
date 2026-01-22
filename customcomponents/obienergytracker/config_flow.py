@@ -26,8 +26,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
         vol.Optional(CONF_COUNTRY, default="DE"): str,
-        vol.Required(CONF_BRIDGE_ID): str,
-        vol.Required(CONF_DEVICE_ID): str,
     }
 )
 
@@ -69,16 +67,19 @@ class ObiEnergyTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
                 email=user_input[CONF_EMAIL],
                 password=user_input[CONF_PASSWORD],
                 country=user_input.get(CONF_COUNTRY, "DE"),
-                bridge_id=user_input[CONF_BRIDGE_ID],
-                device_id=user_input[CONF_DEVICE_ID],
             )
 
             if await api.async_login():
-                return self.async_create_entry(
-                    title=user_input[CONF_EMAIL],
-                    data=user_input,
-                )
-            errors["base"] = "invalid_auth"
+                if info := await api.async_get_bridge_info():
+                    user_input[CONF_BRIDGE_ID] = info["bridge_id"]
+                    user_input[CONF_DEVICE_ID] = info["device_id"]
+                    return self.async_create_entry(
+                        title=user_input[CONF_EMAIL],
+                        data=user_input,
+                    )
+                errors["base"] = "no_devices"
+            else:
+                errors["base"] = "invalid_auth"
 
         return self.async_show_form(
             step_id="user",

@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from aiohttp import ClientError, ClientSession
+import jwt
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +77,57 @@ class ObiEnergyTrackerAPI:
         except (OSError, ClientError) as err:
             _LOGGER.error("Login error: %s", err)
             return False
+
+    async def async_get_bridge_info(self) -> dict[str, str] | None:
+        """Get bridge and device IDs from user profile."""
+        if not self.token:
+            return None
+
+        try:
+            # Decode JWT to get userId
+            decoded_token = jwt.decode(self.token, options={"verify_signature": False})
+            user_id = decoded_token.get("accountId")
+
+            if not user_id:
+                _LOGGER.error("No accountId found in token")
+                return None
+
+            url = f"{ENERGY_TRACKING_URL}/users/{user_id}"
+            headers = {
+                "Accept": "application/vnd.obi.companion.energy-tracking.user.v1+json",
+                "Accept-Encoding": "gzip",
+                "User-Agent": "app_client",
+                "Authorization": f"Bearer {self.token}",
+                "Connection": "Keep-Alive",
+            }
+
+            async with self.session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    _LOGGER.error("Failed to get user info: %d", response.status)
+                    return None
+
+                data = await response.json()
+                bridge = data.get("bridge")
+                if not bridge:
+                    _LOGGER.error("No bridge found in user info")
+                    return None
+
+                self.bridge_id = bridge.get("id")
+                sensors = bridge.get("sensors", [])
+                if sensors:
+                    self.device_id = sensors[0].get("id")
+
+                if not self.bridge_id or not self.device_id:
+                    _LOGGER.error("Could not find bridge_id or device_id")
+                    return None
+
+                return {
+                    "bridge_id": self.bridge_id,
+                    "device_id": self.device_id,
+                }
+        except (jwt.DecodeError, OSError, ClientError) as err:
+            _LOGGER.error("Error getting bridge info: %s", err)
+            return None
 
     async def async_get_totals(self) -> dict[str, Any] | None:
         """Get total energy data (both energy and negative_energy).

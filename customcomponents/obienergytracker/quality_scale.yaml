@@ -13,14 +13,14 @@ rules:
     status: done
     comment: Uses standard Home Assistant modules (coordinator, sensor platform).
   config-flow-test-coverage:
-    status: exempt
-    comment: Config flow testing not yet implemented but can be added.
+    status: done
+    comment: Config flow tests implemented in tests/components/heyobienergytracker/test_config_flow.py.
   config-flow:
     status: done
-    comment: Implemented async_step_user with validation and error handling.
+    comment: Implemented async_step_user with automated bridge discovery and validation.
   dependency-transparency:
     status: done
-    comment: All dependencies listed in requirements (currently none needed).
+    comment: All dependencies (pyjwt) listed in manifest.json.
   docs-actions:
     status: exempt
     comment: Integration does not register custom actions.
