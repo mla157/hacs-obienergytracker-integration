@@ -1,7 +1,6 @@
 {
   "domain": "obi_energy_tracker",
   "name": "OBI Energy Tracker",
-  "version": "0.0.0.1",
   "codeowners": [
     "@mla157"
   ],
@@ -12,5 +11,6 @@
   "quality_scale": "bronze",
   "requirements": [
     "pyjwt==2.10.1"
-  ]
+  ],
+  "version": "0.0.0.1"
 }
