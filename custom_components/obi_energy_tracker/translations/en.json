@@ -4,12 +4,12 @@
             "already_configured": "Account is already configured"
         },
         "create_entry": {
-            "default": "Successfully connected to Obi EnergyTracker"
+            "default": "Successfully connected to OBI EnergyTracker to your home assistant instance"
         },
         "error": {
-            "connection_error": "Failed to connect to Obi EnergyTracker service",
+            "connection_error": "Failed to connect to OBI backend service",
             "invalid_auth": "Invalid email or password",
-            "no_devices": "No Obi EnergyTracker devices found in your account"
+            "no_devices": "No OBI EnergyTracker devices found in your account"
         },
         "step": {
             "user": {
@@ -20,18 +20,18 @@
                 },
                 "data_description": {
                     "country": "The country where your account is registered (e.g., DE)",
-                    "email": "Your Obi account email",
-                    "password": "Your Obi account password"
+                    "email": "Your OBI account email",
+                    "password": "Your OBI account password"
                 },
-                "description": "Enter your Obi account credentials",
-                "title": "Connect to Obi EnergyTracker"
+                "description": "Enter your OBI account credentials",
+                "title": "Connect to (hey)OBI"
             }
         }
     },
     "entity": {
         "sensor": {
             "meter_reading": {
-                "name": "Z\u00e4hlerstand"
+                "name": "Meter Reading"
             }
         }
     }

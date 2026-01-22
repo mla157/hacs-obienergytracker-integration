@@ -129,55 +129,6 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Error getting bridge info: %s", err)
             return None
 
-    async def async_get_totals(self) -> dict[str, Any] | None:
-        """Get total energy data (both energy and negative_energy).
-
-        Returns a dict with:
-        - energy: total energy produced
-        - negative_energy: total energy fed to grid
-        """
-        if not self.token or not self.bridge_id:
-            return None
-
-        try:
-            url = f"{ENERGY_TRACKING_URL}/historical-data/{self.bridge_id}/total"
-            headers = self._get_auth_headers()
-
-            totals = {}
-
-            # Fetch energy (produced)
-            params = {"measures": "energy"}
-            async with self.session.get(
-                url, params=params, headers=headers
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    _LOGGER.debug("Energy totals response: %s", data)
-                    if "value" in data:
-                        totals["energy"] = data["value"]
-                else:
-                    _LOGGER.error("Failed to get energy totals: %d", response.status)
-
-            # Fetch negative_energy (fed to grid)
-            params = {"measures": "negative_energy"}
-            async with self.session.get(
-                url, params=params, headers=headers
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    _LOGGER.debug("Negative energy totals response: %s", data)
-                    if "value" in data:
-                        totals["negative_energy"] = data["value"]
-                else:
-                    _LOGGER.error(
-                        "Failed to get negative_energy totals: %d", response.status
-                    )
-        except OSError as err:
-            _LOGGER.error("Error getting totals: %s", err)
-            return None
-
-        return totals if totals else None
-
     async def async_get_hourly_data(
         self,
         start_date: datetime | None = None,
