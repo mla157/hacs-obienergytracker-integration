@@ -2,6 +2,9 @@
 
 This integration allows you to connect your Obi EnergyTracker solar panel system to Home Assistant.
 
+[![Open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mla157&repository=hacs-obi_energy_tracker&category=energy)
+[![Show this integration in your Home Assistant.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=obi_energy_tracker)
+
 ## Features
 
 - **Authentication**: Secure login with email and password
