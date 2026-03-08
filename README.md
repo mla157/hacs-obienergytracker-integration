@@ -19,14 +19,6 @@ During setup, you'll need:
 - **Password**: Your "OBI" account password
 - **Country**: Country code (default## API Details & Credits
 
-- **Login Endpoint**: \https://www.obi.de/regi/auth/api/public/login\ (JWT-based authentication)
-- **Data Endpoint**: Cloud-based polling for energy statistics and meter dat*Disclaimer: This integration is not affiliated with or endorsed by OBI. Use at your own risk.*cker: debug
-  \\\
-
 ---
 
 *Disclaimer: This integration is not affiliated with or endorsed by OBI. Use at your own risk.*
-n for subsequent API callsce discovery
-- [ ] Bridge and device ID detection
-- [ ] Diagnostics support
-- [ ] Better error handling and recovery
