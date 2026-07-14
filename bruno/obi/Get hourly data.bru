@@ -1,0 +1,42 @@
+meta {
+  name: Get hourly data
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{energyBaseUrl}}/historical-data/{{bridgeId}}/{{deviceId}}/hourly?duration={{duration}}&measures=energy,negative_energy
+  body: none
+  auth: inherit
+}
+
+params:query {
+  duration: {{duration}}
+  measures: energy,negative_energy
+}
+
+headers {
+  Accept: application/vnd.obi.companion.energy-tracking.historical-record.v1+json
+  Accept-Encoding: gzip
+  User-Agent: app_client
+  Connection: Keep-Alive
+}
+
+script:pre-request {
+  // 24h-Fenster ab 23:00 UTC des Vortages, analog zu coordinator.py (DAYS_OF_HISTORY = 7 -> PT168H).
+  const numDays = 7;
+  const start = new Date();
+  start.setUTCHours(23, 0, 0, 0);
+  const isoStart = start.toISOString().replace(".000Z", "Z");
+  bru.setVar("duration", `${isoStart}/PT${numDays * 24}H`);
+}
+
+docs {
+  Liefert stündliche Energiewerte (Erzeugung/Verbrauch) für ein Zeitfenster.
+
+  `duration` wird im Pre-Request-Script automatisch berechnet (ISO-8601-Intervall
+  `<start>/PT<Stunden>H`, Standard: 7 Tage / PT168H, analog `DAYS_OF_HISTORY` in
+  `coordinator.py`). Bei Bedarf `numDays` im Script anpassen.
+
+  Entspricht `ObiEnergyTrackerAPI.async_get_hourly_data` in `api.py`.
+}

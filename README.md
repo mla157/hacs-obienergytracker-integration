@@ -25,10 +25,22 @@ During setup, you'll need:
 The integration retrieves:
 
 - Meter Reading
+- Feed-In Meter Reading
 - Battery Level
 - Online Status
 - Connection Strength
 - Last Record Received At
+
+## Bruno
+
+Unofficial API for the "heyOBI" backend, as used in this repository. The endpoints are not officially documented.
+
+### Procedure
+
+1. Perform **Login** → sets `token` (JWT) and `userId` (from the JWT payload).
+2. Perform **Get bridge info** → sets `bridgeId` and `deviceId` based on the first
+   linked sensor.
+3. After that, **Get hourly data** and **Get meter data** can be called...
 
 ---
 
