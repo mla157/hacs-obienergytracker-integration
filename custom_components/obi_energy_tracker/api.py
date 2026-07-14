@@ -248,7 +248,7 @@ class ObiEnergyTrackerAPI:
 
             params = {
                 "duration": duration_str,
-                "measures": "energy",
+                "measures": "energy,negative_energy",
             }
 
             headers = self._get_auth_headers()

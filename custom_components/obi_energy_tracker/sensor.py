@@ -34,6 +34,7 @@ async def async_setup_entry(
 
     sensors = [
         ObiMeterReadingSensor(coordinator),
+        ObiFeedInMeterReadingSensor(coordinator),
         ObiBatteryLevelSensor(coordinator),
         ObiIsOnlineSensor(coordinator),
         ObiConnectionStrengthSensor(coordinator),
@@ -41,6 +42,36 @@ async def async_setup_entry(
     ]
 
     async_add_entities(sensors)
+
+
+def _extract_meter_reading(meter_data: Any, measure: str) -> float | None:
+    """Extract the latest reading for a given measure from meter data.
+
+    The meter endpoint can return either a single record (dict) or a list of
+    records, each optionally tagged with a "measure" (e.g. "energy" or
+    "negative_energy"). Falls back to legacy shapes ("energy"/"value" keys
+    without a "measure" tag) for the "energy" measure only.
+    """
+    if not meter_data:
+        return None
+
+    records = meter_data if isinstance(meter_data, list) else [meter_data]
+    records = [record for record in records if isinstance(record, dict)]
+    if not records:
+        return None
+
+    matching = [record for record in records if record.get("measure") == measure]
+    if matching:
+        return matching[-1].get("value")
+
+    if measure == "energy":
+        legacy = records[-1]
+        if "energy" in legacy:
+            return legacy["energy"]
+        if "value" in legacy:
+            return legacy["value"]
+
+    return None
 
 
 class ObiEnergySensorBase(CoordinatorEntity[ObiEnergyTrackerCoordinator], SensorEntity):
@@ -58,17 +89,16 @@ class ObiEnergySensorBase(CoordinatorEntity[ObiEnergyTrackerCoordinator], Sensor
         }
 
 
-class ObiMeterReadingSensor(ObiEnergySensorBase):
-    """Sensor for total meter reading (Zählerstand)."""
+class ObiMeterSensorBase(ObiEnergySensorBase):
+    """Base sensor for cumulative meter readings (Zählerstand)."""
 
-    _attr_unique_id = "obi_meter_reading"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_translation_key = "meter_reading"
     _attr_native_unit_of_measurement = "Wh"
+    _measure: str
 
     def __init__(self, coordinator: ObiEnergyTrackerCoordinator) -> None:
-        """Initialize the meter reading sensor."""
+        """Initialize the meter sensor."""
         super().__init__(coordinator)
         self._last_native_value: float | None = None
         self._last_native_value_set = False
@@ -85,35 +115,32 @@ class ObiMeterReadingSensor(ObiEnergySensorBase):
 
     @property
     def native_value(self) -> float | None:
-        """Return the meter reading value."""
+        """Return the meter reading value for this sensor's measure."""
         _LOGGER.debug(
-            "ObiMeterReadingSensor native_value called. Data: %s",
+            "%s native_value called. Data: %s",
+            type(self).__name__,
             self.coordinator.data,
         )
-        if (
-            self.coordinator.data
-            and "meter" in self.coordinator.data
-            and self.coordinator.data["meter"]
-        ):
-            meter_data = self.coordinator.data["meter"]
+        if not self.coordinator.data:
+            return None
 
-            # If it's a list, get the latest record
-            if isinstance(meter_data, list) and len(meter_data) > 0:
-                meter_data = meter_data[-1]
+        return _extract_meter_reading(self.coordinator.data.get("meter"), self._measure)
 
-            if not isinstance(meter_data, dict):
-                return None
 
-            # Look for "value" (if measure is energy) or "energy" directly
-            if "energy" in meter_data:
-                return meter_data["energy"]
-            if "value" in meter_data and meter_data.get("measure") == "energy":
-                return meter_data["value"]
-            # Fallback to "value" if present
-            if "value" in meter_data:
-                return meter_data["value"]
+class ObiMeterReadingSensor(ObiMeterSensorBase):
+    """Sensor for total meter reading (Zählerstand / Bezug)."""
 
-        return None
+    _attr_unique_id = "obi_meter_reading"
+    _attr_translation_key = "meter_reading"
+    _measure = "energy"
+
+
+class ObiFeedInMeterReadingSensor(ObiMeterSensorBase):
+    """Sensor for total feed-in meter reading (Zählerstand Netzeinspeisung)."""
+
+    _attr_unique_id = "obi_feed_in_meter_reading"
+    _attr_translation_key = "feed_in_meter_reading"
+    _measure = "negative_energy"
 
 
 class ObiDeviceValueSensorBase(ObiEnergySensorBase):

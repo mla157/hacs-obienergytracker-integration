@@ -31,7 +31,10 @@
   "entity": {
     "sensor": {
       "meter_reading": {
-        "name": "Zählerstand"
+        "name": "Zählerstand Netzbezug"
+      },
+      "feed_in_meter_reading": {
+        "name": "Zählerstand Netzeinspeisung"
       },
        "battery_level": {
          "name": "Batteriestand"

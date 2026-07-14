@@ -33,6 +33,9 @@
             "meter_reading": {
                 "name": "Meter Reading"
             },
+            "feed_in_meter_reading": {
+                "name": "Feed-in Meter Reading"
+            },
             "battery_level": {
                 "name": "Battery Level"
             },
