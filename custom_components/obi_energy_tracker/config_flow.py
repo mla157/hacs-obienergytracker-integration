@@ -72,7 +72,9 @@ class ObiEnergyTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
             if await api.async_login():
                 if info := await api.async_get_bridge_info():
                     user_input[CONF_BRIDGE_ID] = info["bridge_id"]
-                    user_input[CONF_DEVICE_ID] = info["device_id"]
+                    
+                    user_input["sensors"] = info["sensors"]
+                    
                     return self.async_create_entry(
                         title=user_input[CONF_EMAIL],
                         data=user_input,

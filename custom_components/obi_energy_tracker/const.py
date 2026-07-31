@@ -10,6 +10,7 @@ CONF_DEVICE_ID = "device_id"
 # Default values
 DEFAULT_COUNTRY = "DE"
 DEFAULT_SCAN_INTERVAL = 300  # 5 minutes
+DEFAULT_DEVICE_NAME = "OBI Energy Tracker"
 
 # Data attributes
 ATTR_BRIDGE_ID = "bridge_id"

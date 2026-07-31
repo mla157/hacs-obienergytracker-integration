@@ -38,36 +38,47 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api = api
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API.
+        """Fetch data from API for all configured sensors."""
+        
+        sensors = self.config_entry.data.get("sensors", [])
+        
+        if not sensors and "device_id" in self.config_entry.data:
+            sensors = [{
+                "device_id": self.config_entry.data["device_id"],
+                "display_name": self.config_entry.data.get("device_name", "OBI Tracker")
+            }]
+            
+        if not sensors:
+            raise UpdateFailed("Keine Sensoren in der Konfiguration gefunden.")
 
-        Retrieves:
-        - Meter reading (Zählerstand) for the device
-        - Hourly energy data for the past 7 days
-        """
-        try:
-            meter = await self.api.async_get_meter_data()
-            _LOGGER.debug("Meter data: %s", meter)
+        all_sensor_data = {}
+        end_date = datetime.now()
 
-            # Fetch hourly data for past days (default 7 days)
-            end_date = datetime.now()
-            hourly_data = await self.api.async_get_hourly_data(
-                start_date=end_date,
-                num_days=DAYS_OF_HISTORY,
-            )
-            _LOGGER.debug(
-                "Hourly data fetched: %s", "available" if hourly_data else "none"
-            )
+        for sensor in sensors:
+            device_id = sensor.get("device_id")
+            if not device_id:
+                continue
+                
+            try:
+                meter = await self.api.async_get_meter_data(device_id)
+                
+                # Fetch hourly data for past days (default 7 days)
+                hourly_data = await self.api.async_get_hourly_data(
+                    device_id=device_id,
+                    start_date=end_date,
+                    num_days=DAYS_OF_HISTORY,
+                )
+                
+                all_sensor_data[device_id] = {
+                    "hourly": hourly_data,
+                    "meter": meter,
+                }
+                
+                _LOGGER.debug("Successfully fetched data for device %s", device_id)
+            except OSError as err:
+                _LOGGER.error("Failed to update data for device %s: %s", device_id, err)
 
-            _LOGGER.info(
-                "Successfully fetched data: meter=%s, hourly_days=%d",
-                "available" if meter else "none",
-                DAYS_OF_HISTORY,
-            )
-        except OSError as err:
-            _LOGGER.error("Failed to update data: %s", err)
-            raise UpdateFailed(f"Failed to update data: {err}") from err
+        if not all_sensor_data:
+            raise UpdateFailed("Fehler beim Abrufen der Daten für alle Sensoren.")
 
-        return {
-            "hourly": hourly_data,
-            "meter": meter,
-        }
+        return all_sensor_data
