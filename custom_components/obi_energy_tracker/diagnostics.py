@@ -12,7 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import ObiEnergyTrackerConfigEntry
 from .api import ObiEnergyTrackerAPI
-from .const import CONF_BRIDGE_ID, CONF_COUNTRY, CONF_DEVICE_ID
+from .const import CONF_BRIDGE_ID, CONF_COUNTRY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,6 @@ async def async_get_config_entry_diagnostics(
         password=config_entry.data.get("password", ""),
         country=config_entry.data.get(CONF_COUNTRY, "DE"),
         bridge_id=config_entry.data.get(CONF_BRIDGE_ID),
-        device_id=config_entry.data.get(CONF_DEVICE_ID),
     )
 
     api_available = False
@@ -44,7 +43,8 @@ async def async_get_config_entry_diagnostics(
             "email": config_entry.data.get("email", ""),
             "country": config_entry.data.get(CONF_COUNTRY, "DE"),
             "bridge_id": config_entry.data.get(CONF_BRIDGE_ID),
-            "device_id": config_entry.data.get(CONF_DEVICE_ID),
+            "sensors": config_entry.data.get("sensors", []),
+            "device_id_legacy": config_entry.data.get("device_id"),
         },
         "api_available": api_available,
     }

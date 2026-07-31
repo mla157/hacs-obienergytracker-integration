@@ -26,7 +26,6 @@ class ObiEnergyTrackerAPI:
         password: str,
         country: str = "DE",
         bridge_id: str | None = None,
-        device_id: str | None = None,
     ) -> None:
         """Initialize the API client."""
         self.session = session
@@ -35,7 +34,7 @@ class ObiEnergyTrackerAPI:
         self.country = country
         self.token: str | None = None
         self.bridge_id = bridge_id
-        self.device_id = device_id
+
 
     async def async_login(self) -> bool:
         """Authenticate with the Obi EnergyTracker API."""
@@ -78,13 +77,12 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Login error: %s", err)
             return False
 
-    async def async_get_bridge_info(self) -> dict[str, str] | None:
-        """Get bridge and device IDs from user profile."""
+    async def async_get_bridge_info(self) -> dict[str, Any] | None:
+        """Get bridge and all connected devices from user profile."""
         if not self.token:
             return None
 
         try:
-            # Decode JWT to get userId
             decoded_token = jwt.decode(self.token, options={"verify_signature": False})
             user_id = decoded_token.get("accountId")
 
@@ -113,17 +111,22 @@ class ObiEnergyTrackerAPI:
                     return None
 
                 self.bridge_id = bridge.get("id")
-                sensors = bridge.get("sensors", [])
-                if sensors:
-                    self.device_id = sensors[0].get("id")
+                raw_sensors = bridge.get("sensors", [])
+                
+                sensors_list = []
+                for sensor in raw_sensors:
+                    sensors_list.append({
+                        "device_id": sensor.get("id"),
+                        "display_name": sensor.get("displayName")
+                    })
 
-                if not self.bridge_id or not self.device_id:
-                    _LOGGER.error("Could not find bridge_id or device_id")
+                if not self.bridge_id or not sensors_list:
+                    _LOGGER.error("Could not find bridge_id or any sensors")
                     return None
 
                 return {
                     "bridge_id": self.bridge_id,
-                    "device_id": self.device_id,
+                    "sensors": sensors_list,
                 }
         except (jwt.DecodeError, OSError, ClientError) as err:
             _LOGGER.error("Error getting bridge info: %s", err)
@@ -131,38 +134,27 @@ class ObiEnergyTrackerAPI:
 
     async def async_get_hourly_data(
         self,
+        device_id: str,
         start_date: datetime | None = None,
         num_days: int = 1,
     ) -> dict[str, Any] | None:
-        """Get hourly energy data for multiple days.
-
-        Args:
-            start_date: Start date for data retrieval (defaults to today)
-            num_days: Number of days to fetch (default 1)
-
-        Returns:
-            Dictionary containing hourly energy data
-        """
-        if not self.token or not self.bridge_id or not self.device_id:
+        """Get hourly energy data for multiple days."""
+        if not self.token or not self.bridge_id or not device_id:
             return None
 
         try:
             if start_date is None:
                 start_date = datetime.now()
 
-            # Format as ISO 8601 datetime with Z suffix for UTC
-            # The API expects: start_dateT23:00:00Z/PT{days}H format
-            # So we use start_date at 23:00 UTC of previous day for 24-hour window
             duration_start = start_date.replace(
                 hour=23, minute=0, second=0, microsecond=0
             )
             duration_hours = num_days * 24
-
             duration_str = f"{duration_start.isoformat()}Z/PT{duration_hours}H"
 
             url = (
                 f"{ENERGY_TRACKING_URL}/historical-data/"
-                f"{self.bridge_id}/{self.device_id}/hourly"
+                f"{self.bridge_id}/{device_id}/hourly"
             )
 
             params = {
@@ -183,23 +175,20 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Error getting hourly data: %s", err)
             return None
 
-    async def async_get_meter_data(self) -> dict[str, Any] | None:
+    async def async_get_meter_data(self, device_id: str) -> dict[str, Any] | None:
         """Get meter reading data (Zählerstand)."""
-        if not self.token or not self.bridge_id or not self.device_id:
+        if not self.token or not self.bridge_id or not device_id:
             return None
 
         try:
-            # Dynamic duration: a 6-hour window ending now
-            # Meter readings represent the total state at points in time
             now = datetime.now()
             start_time = now - timedelta(hours=6)
-            # Format: 2026-01-18T08:55:11.896Z
             start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             duration_str = f"{start_time_str}/PT6H"
 
             url = (
                 f"{ENERGY_TRACKING_URL}/historical-data/"
-                f"{self.bridge_id}/{self.device_id}/meter"
+                f"{self.bridge_id}/{device_id}/meter"
             )
 
             params = {
