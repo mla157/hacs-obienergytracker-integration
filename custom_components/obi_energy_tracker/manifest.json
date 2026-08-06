@@ -11,7 +11,7 @@
   "issue_tracker": "https://github.com/mla157/hacs-obienergytracker-integration/issues",
   "quality_scale": "bronze",
   "requirements": [
-    "pyjwt==2.12.1"
+    "pyjwt>=2.8.0,<3.0.0"
   ],
-  "version": "0.0.0.2"
+  "version": "0.0.0.3"
 }
