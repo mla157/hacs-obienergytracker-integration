@@ -13,5 +13,5 @@
   "requirements": [
     "pyjwt>=2.8.0,<3.0.0"
   ],
-  "version": "0.0.0.3"
+  "version": "0.0.0.6"
 }
