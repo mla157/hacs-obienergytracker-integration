@@ -48,6 +48,9 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             meter = await self.api.async_get_meter_data()
             _LOGGER.debug("Meter data: %s", meter)
 
+            device = await self.api.async_get_device_info()
+            _LOGGER.debug("Device data: %s", device)
+
             # Fetch hourly data for past days (default 7 days)
             end_date = datetime.now()
             hourly_data = await self.api.async_get_hourly_data(
@@ -59,8 +62,9 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
 
             _LOGGER.info(
-                "Successfully fetched data: meter=%s, hourly_days=%d",
+                "Successfully fetched data: meter=%s, device=%s, hourly_days=%d",
                 "available" if meter else "none",
+                "available" if device else "none",
                 DAYS_OF_HISTORY,
             )
         except OSError as err:
@@ -70,4 +74,5 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             "hourly": hourly_data,
             "meter": meter,
+            "device": device,
         }

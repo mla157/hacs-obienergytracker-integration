@@ -32,6 +32,18 @@
         "sensor": {
             "meter_reading": {
                 "name": "Meter Reading"
+            },
+            "battery_level": {
+                "name": "Battery Level"
+            },
+            "is_online": {
+                "name": "Online Status"
+            },
+            "connection_strength": {
+                "name": "Connection Strength"
+            },
+            "last_record_received_at": {
+                "name": "Last Record Received At"
             }
         }
     }

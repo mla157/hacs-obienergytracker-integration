@@ -32,7 +32,19 @@
     "sensor": {
       "meter_reading": {
         "name": "Zählerstand"
-      }
+      },
+       "battery_level": {
+         "name": "Batteriestand"
+       },
+       "is_online": {
+         "name": "Online-Status"
+       },
+       "connection_strength": {
+         "name": "Verbindungsstärke"
+       },
+       "last_record_received_at": {
+         "name": "Letzter Datensatz empfangen um"
+       }
     }
   }
 }

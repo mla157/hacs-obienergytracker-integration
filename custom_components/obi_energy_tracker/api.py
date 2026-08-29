@@ -78,8 +78,8 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Login error: %s", err)
             return False
 
-    async def async_get_bridge_info(self) -> dict[str, str] | None:
-        """Get bridge and device IDs from user profile."""
+    async def async_get_bridge_info(self) -> dict[str, Any] | None:
+        """Get bridge/device IDs and current device details from user profile."""
         if not self.token:
             return None
 
@@ -114,8 +114,27 @@ class ObiEnergyTrackerAPI:
 
                 self.bridge_id = bridge.get("id")
                 sensors = bridge.get("sensors", [])
-                if sensors:
-                    self.device_id = sensors[0].get("id")
+                selected_sensor: dict[str, Any] | None = None
+
+                if self.device_id:
+                    selected_sensor = next(
+                        (
+                            sensor
+                            for sensor in sensors
+                            if isinstance(sensor, dict)
+                            and sensor.get("id") == self.device_id
+                        ),
+                        None,
+                    )
+
+                if selected_sensor is None and sensors:
+                    first_sensor = sensors[0]
+                    selected_sensor = (
+                        first_sensor if isinstance(first_sensor, dict) else None
+                    )
+
+                if selected_sensor:
+                    self.device_id = selected_sensor.get("id")
 
                 if not self.bridge_id or not self.device_id:
                     _LOGGER.error("Could not find bridge_id or device_id")
@@ -124,10 +143,35 @@ class ObiEnergyTrackerAPI:
                 return {
                     "bridge_id": self.bridge_id,
                     "device_id": self.device_id,
+                    "batteryLevel": selected_sensor.get("batteryLevel")
+                    if selected_sensor
+                    else None,
+                    "isOnline": selected_sensor.get("isOnline")
+                    if selected_sensor
+                    else None,
+                    "connectionStrength": selected_sensor.get("connectionStrength")
+                    if selected_sensor
+                    else None,
+                    "lastRecordReceivedAt": selected_sensor.get("lastRecordReceivedAt")
+                    if selected_sensor
+                    else None,
                 }
         except (jwt.DecodeError, OSError, ClientError) as err:
             _LOGGER.error("Error getting bridge info: %s", err)
             return None
+
+    async def async_get_device_info(self) -> dict[str, Any] | None:
+        """Get current device details from the bridge info response."""
+        bridge_info = await self.async_get_bridge_info()
+        if not bridge_info:
+            return None
+
+        return {
+            "batteryLevel": bridge_info.get("batteryLevel"),
+            "isOnline": bridge_info.get("isOnline"),
+            "connectionStrength": bridge_info.get("connectionStrength"),
+            "lastRecordReceivedAt": bridge_info.get("lastRecordReceivedAt"),
+        }
 
     async def async_get_hourly_data(
         self,

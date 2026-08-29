@@ -10,14 +10,25 @@ Add this repository, via custom repository: https://www.hacs.xyz/docs/faq/custom
 <img src="https://bilder.obi.de/d9c6b340-b37f-48fd-92f2-72114bad03ad/prZZK/image.jpeg" width="200" alt="Energy Tracker Device">
 
 The "OBI Energy Tracker" is a low cost device to read out smart energy meters. In default you can access the data in the "heyOBI" application on our smartphone.
-I extracted the API Calls from the backend of the application, and created this "Home Assistant" Integration. 
+I extracted the API Calls from the backend of the application, and created this "Home Assistant" Integration.
 
 ## Configuration
 
 During setup, you'll need:
+
 - **Email**: Your "OBI" account email address
 - **Password**: Your "OBI" account password
-- **Country**: Country code (default## API Details & Credits
+- **Country**: Country code (default: DE for Germany)
+
+## API Details
+
+The integration retrieves:
+
+- Meter Reading
+- Battery Level
+- Online Status
+- Connection Strength
+- Last Record Received At
 
 ---
 

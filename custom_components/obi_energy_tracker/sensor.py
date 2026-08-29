@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -32,6 +34,10 @@ async def async_setup_entry(
 
     sensors = [
         ObiMeterReadingSensor(coordinator),
+        ObiBatteryLevelSensor(coordinator),
+        ObiIsOnlineSensor(coordinator),
+        ObiConnectionStrengthSensor(coordinator),
+        ObiLastRecordReceivedAtSensor(coordinator),
     ]
 
     async_add_entities(sensors)
@@ -108,3 +114,79 @@ class ObiMeterReadingSensor(ObiEnergySensorBase):
                 return meter_data["value"]
 
         return None
+
+
+class ObiDeviceValueSensorBase(ObiEnergySensorBase):
+    """Base sensor for values sourced from coordinator device data."""
+
+    _device_key: str
+
+    @property
+    def native_value(self) -> Any:
+        """Return value for the configured device key."""
+        if not self.coordinator.data:
+            return None
+
+        device_data = self.coordinator.data.get("device")
+        if not isinstance(device_data, dict):
+            return None
+
+        return device_data.get(self._device_key)
+
+
+class ObiBatteryLevelSensor(ObiDeviceValueSensorBase):
+    """Sensor for battery level."""
+
+    _attr_unique_id = "obi_battery_level"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_translation_key = "battery_level"
+    _attr_native_unit_of_measurement = "%"
+    _device_key = "batteryLevel"
+
+
+class ObiIsOnlineSensor(ObiDeviceValueSensorBase):
+    """Sensor for current online state."""
+
+    _attr_unique_id = "obi_is_online"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_translation_key = "is_online"
+    _attr_options = ["online", "offline"]
+    _device_key = "isOnline"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the online status as enum value."""
+        value = super().native_value
+        if value is None:
+            return None
+        return "online" if bool(value) else "offline"
+
+
+class ObiConnectionStrengthSensor(ObiDeviceValueSensorBase):
+    """Sensor for connection strength reported by API."""
+
+    _attr_unique_id = "obi_connection_strength"
+    _attr_translation_key = "connection_strength"
+    _device_key = "connectionStrength"
+
+
+class ObiLastRecordReceivedAtSensor(ObiDeviceValueSensorBase):
+    """Sensor for timestamp of the last received record."""
+
+    _attr_unique_id = "obi_last_record_received_at"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_translation_key = "last_record_received_at"
+    _device_key = "lastRecordReceivedAt"
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return parsed timestamp value."""
+        value = super().native_value
+        if not isinstance(value, str):
+            return None
+
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
