@@ -1,0 +1,47 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{authBaseUrl}}/login
+  body: json
+  auth: none
+}
+
+headers {
+  Accept-Encoding: gzip
+  Connection: Keep-Alive
+  Content-Type: application/json
+  x-app-type: b2c
+  x-obi-locale: de-DE
+  User-Agent: heyOBI APP / Android Phone 30
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "country": "{{country}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("token", res.body.token);
+
+  // Decode the JWT payload (base64url) to extract the OBI accountId.
+  const payload = res.body.token.split(".")[1];
+  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const decoded = JSON.parse(Buffer.from(normalized, "base64").toString("utf8"));
+  bru.setVar("userId", decoded.accountId);
+}
+
+docs {
+  Authenticiert gegen das OBI-Account-Backend und liefert ein JWT (`token`), das für
+  alle nachfolgenden Requests an das Energy-Tracking-Backend als Bearer-Token
+  verwendet wird. Aus dem JWT wird zusätzlich `accountId` extrahiert und als
+  `userId` gespeichert (wird von "Get bridge info" benötigt).
+
+  Entspricht `ObiEnergyTrackerAPI.async_login` in `api.py`.
+}

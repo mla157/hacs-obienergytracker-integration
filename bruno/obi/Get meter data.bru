@@ -1,0 +1,40 @@
+meta {
+  name: Get meter data
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{energyBaseUrl}}/historical-data/{{bridgeId}}/{{deviceId}}/meter?duration={{duration}}&measures=energy
+  body: none
+  auth: inherit
+}
+
+params:query {
+  duration: {{duration}}
+  measures: energy
+}
+
+headers {
+  Accept: application/vnd.obi.companion.energy-tracking.historical-record.v1+json
+  Accept-Encoding: gzip
+  User-Agent: app_client
+  Connection: Keep-Alive
+}
+
+script:pre-request {
+  // 6h-Fenster endend "jetzt", analog zu api.py async_get_meter_data.
+  const now = new Date();
+  const start = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const isoStart = start.toISOString(); // z.B. 2026-01-18T08:55:11.896Z
+  bru.setVar("duration", `${isoStart}/PT6H`);
+}
+
+docs {
+  Liefert den Zählerstand (Meter Reading) für ein 6-Stunden-Fenster endend "jetzt".
+
+  `duration` wird im Pre-Request-Script automatisch berechnet (ISO-8601-Intervall
+  `<start>/PT6H`).
+
+  Entspricht `ObiEnergyTrackerAPI.async_get_meter_data` in `api.py`.
+}

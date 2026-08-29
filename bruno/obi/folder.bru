@@ -1,0 +1,28 @@
+meta {
+  name: OBI EnergyTracker
+  seq: 4
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  # OBI EnergyTracker
+
+  Inoffizielle API des "heyOBI"-Backends, wie sie in der Home-Assistant-Integration
+  [hacs-obienergytracker-integration](https://github.com/mla157/hacs-obienergytracker-integration)
+  verwendet wird. Die Endpunkte sind nicht offiziell dokumentiert und wurden aus dem
+  Traffic der App extrahiert.
+
+  ## Ablauf
+
+  1. **Login** ausführen → setzt `token` (JWT) und `userId` (aus dem JWT-Payload).
+  2. **Get bridge info** ausführen → setzt `bridgeId` und `deviceId` anhand des ersten
+     verknüpften Sensors.
+  3. Danach können **Get hourly data** und **Get meter data** aufgerufen werden.
+}

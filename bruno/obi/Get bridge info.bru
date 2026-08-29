@@ -1,0 +1,37 @@
+meta {
+  name: Get bridge info
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{energyBaseUrl}}/users/{{userId}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Accept: application/vnd.obi.companion.energy-tracking.user.v1+json
+  Accept-Encoding: gzip
+  User-Agent: app_client
+  Connection: Keep-Alive
+}
+
+script:post-response {
+  const bridge = res.body.bridge;
+  bru.setVar("bridgeId", bridge?.id);
+
+  const sensors = bridge?.sensors ?? [];
+  const firstSensor = sensors[0];
+  if (firstSensor) {
+    bru.setVar("deviceId", firstSensor.id);
+  }
+}
+
+docs {
+  Liefert Bridge-/Sensor-Informationen (u. a. `bridge.id` und die verknüpften
+  Sensoren) für den eingeloggten Account. Setzt `bridgeId` und `deviceId`
+  (ersten gefundenen Sensor) für die nachfolgenden Requests.
+
+  Entspricht `ObiEnergyTrackerAPI.async_get_bridge_info` in `api.py`.
+}
