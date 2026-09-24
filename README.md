@@ -26,10 +26,26 @@ The integration retrieves:
 
 - Meter Reading
 - Feed-In Meter Reading
+- Live Power (see below)
 - Battery Level
 - Online Status
 - Connection Strength
 - Last Record Received At
+
+### Live mode
+
+The heyOBI app shows a real-time power value, and this integration can do the
+same. It is a **switch**, not an always-on sensor, because live mode works by
+lowering the sensor's upload interval from 300 to 2 seconds - and that sensor
+runs on a battery.
+
+Switch `Live mode` on and the `Live Power` sensor updates every two seconds.
+Switch it off, let it time out, reload the integration or shut Home Assistant
+down, and the upload interval goes back to 300 seconds.
+
+The timeout defaults to 10 minutes and can be changed in the integration's
+options; `0` disables it. Leaving live mode on permanently will drain the
+sensor battery, so do that deliberately.
 
 ## Bruno
 

@@ -18,6 +18,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import ObiEnergyTrackerConfigEntry
 from .const import DOMAIN
 from .coordinator import ObiEnergyTrackerCoordinator
+from .live import ObiLiveMode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,7 +33,8 @@ async def async_setup_entry(
     """Set up sensors from a config entry."""
     coordinator = config_entry.runtime_data
 
-    sensors = [
+    sensors: list[SensorEntity] = [
+        ObiLivePowerSensor(coordinator.live),
         ObiMeterReadingSensor(coordinator),
         ObiFeedInMeterReadingSensor(coordinator),
         ObiBatteryLevelSensor(coordinator),
@@ -217,3 +219,48 @@ class ObiLastRecordReceivedAtSensor(ObiDeviceValueSensorBase):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
+
+
+class ObiLivePowerSensor(SensorEntity):
+    """Momentary power from the live websocket.
+
+    Only has a value while the live mode switch is on; the rest of the time
+    the entity reports itself as unavailable.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_unique_id = "obi_live_power"
+    _attr_translation_key = "live_power"
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "W"
+    _attr_suggested_display_precision = 0
+
+    def __init__(self, live: ObiLiveMode) -> None:
+        """Initialize the sensor."""
+        self._live = live
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, "obi_energy_tracker")},
+            "name": "Obi EnergyTracker",
+            "manufacturer": "Obi",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to live mode updates."""
+        self.async_on_remove(self._live.async_add_listener(self._handle_update))
+
+    @callback
+    def _handle_update(self) -> None:
+        """Write the new state when a frame arrives."""
+        self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        """Only available while the websocket actually delivers data."""
+        return self._live.connected
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the most recent live power value in watts."""
+        return self._live.power

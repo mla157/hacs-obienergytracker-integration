@@ -36,6 +36,9 @@
       "feed_in_meter_reading": {
         "name": "Zählerstand Netzeinspeisung"
       },
+      "live_power": {
+        "name": "Aktuelle Leistung (Live)"
+      },
        "battery_level": {
          "name": "Batteriestand"
        },
@@ -48,6 +51,11 @@
        "last_record_received_at": {
          "name": "Letzter Datensatz empfangen um"
        }
+    },
+    "switch": {
+      "live_mode": {
+        "name": "Live-Modus"
+      }
     }
   }
 }

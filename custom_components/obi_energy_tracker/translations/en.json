@@ -36,6 +36,9 @@
             "feed_in_meter_reading": {
                 "name": "Feed-in Meter Reading"
             },
+            "live_power": {
+                "name": "Live Power"
+            },
             "battery_level": {
                 "name": "Battery Level"
             },
@@ -47,6 +50,11 @@
             },
             "last_record_received_at": {
                 "name": "Last Record Received At"
+            }
+        },
+        "switch": {
+            "live_mode": {
+                "name": "Live Mode"
             }
         }
     }

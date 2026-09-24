@@ -10,7 +10,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ObiEnergyTrackerAPI
-from .const import DOMAIN
+from .const import DOMAIN, LIVE_TIMEOUT
+from .live import ObiLiveMode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=config_entry,
         )
         self.api = api
+        self.live = ObiLiveMode(hass, api, LIVE_TIMEOUT)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API.

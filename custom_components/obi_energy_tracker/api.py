@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import json
 import logging
 from typing import Any
 
@@ -14,6 +15,12 @@ _LOGGER = logging.getLogger(__name__)
 # API endpoints
 LOGIN_URL = "https://www.obi.de/regi/auth/api/public/login"
 ENERGY_TRACKING_URL = "https://energy-tracking-backend.prod-eks.dbs.obi.solutions"
+
+# Live mode runs on the newer gateway, where the energy-tracking API sits
+# behind a path prefix. The historical endpoints above are unaffected.
+LIVE_API_BASE = "https://api.obi.com/energytracker/api"
+LIVE_WS_URL = "wss://api.obi.com/energytracker/api-livemode/retrieving"
+SENSOR_MEDIA_TYPE = "application/vnd.obi.companion.energy-tracking.sensor.v2+json"
 
 
 class ObiEnergyTrackerAPI:
@@ -276,3 +283,66 @@ class ObiEnergyTrackerAPI:
             "Authorization": f"Bearer {self.token}",
             "Connection": "Keep-Alive",
         }
+
+    async def async_set_upload_interval(self, interval: int) -> bool:
+        """Set the sensor's upload interval, which is what drives live mode.
+
+        The backend accepts only the two values the app uses (2 seconds for
+        live, 300 for idle) and answers 400 for anything else.
+        """
+        if not self.token or not self.device_id:
+            return False
+
+        url = f"{LIVE_API_BASE}/sensors/{self.device_id}"
+        payload = json.dumps({"id": self.device_id, "uploadInterval": interval})
+        headers = {
+            "Accept": SENSOR_MEDIA_TYPE,
+            "Content-Type": SENSOR_MEDIA_TYPE,
+            "Accept-Encoding": "gzip",
+            "User-Agent": "app_client",
+            "Connection": "Keep-Alive",
+        }
+
+        for attempt in (1, 2):
+            headers["Authorization"] = f"Bearer {self.token}"
+            try:
+                async with self.session.patch(
+                    url, data=payload, headers=headers
+                ) as response:
+                    if response.status == 401 and attempt == 1:
+                        if await self.async_login():
+                            continue
+                        return False
+                    if response.status >= 300:
+                        _LOGGER.error(
+                            "Failed to set upload interval to %d: %d %s",
+                            interval,
+                            response.status,
+                            (await response.text())[:200],
+                        )
+                        return False
+                    return True
+            except (OSError, ClientError) as err:
+                _LOGGER.error("Error setting upload interval: %s", err)
+                return False
+
+        return False
+
+    def live_ws_connect(self) -> Any:
+        """Return the websocket connection for live readings.
+
+        Must be wss: the backend answers plain ws on port 80 with HTTP 400,
+        even though the app's own code asks for it.
+        """
+        return self.session.ws_connect(
+            LIVE_WS_URL,
+            params={
+                "bridgeId": self.bridge_id or "",
+                "sensorId": self.device_id or "",
+            },
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "User-Agent": "app_client",
+            },
+            heartbeat=30,
+        )
