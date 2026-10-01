@@ -16,7 +16,7 @@ from .session import async_create_obi_session
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 
 type ObiEnergyTrackerConfigEntry = ConfigEntry[ObiEnergyTrackerCoordinator]
@@ -60,6 +60,11 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: ObiEnergyTrackerConfigEntry
 ) -> bool:
     """Unload a config entry."""
+    # Switch live mode off first: it has to put the sensor's upload interval
+    # back to its idle value, otherwise the battery keeps draining at the
+    # two-second rate after the entry is gone.
+    await entry.runtime_data.live.async_turn_off()
+
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id, None)
 
