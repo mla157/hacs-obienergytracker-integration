@@ -29,8 +29,22 @@ STANDBY_MEDIA_TYPE = (
     "application/vnd.obi.companion.energy-tracking.analytics-standby.v1+json"
 )
 
-# Standby power is only served for these intervals. quarterhour, minutely,
-# raw and live were probed against the live API and answer HTTP 400.
+# Fields carried per sensor in the user response. All of them come from the
+# one call the integration already makes, so reading more of them costs no
+# extra request.
+SENSOR_DETAIL_FIELDS = (
+    "batteryLevel",
+    "isOnline",
+    "connectionStrength",
+    "lastRecordReceivedAt",
+    "firmwareVersion",
+    "hardwareVersion",
+    "otaStatus",
+    "otaProgress",
+    "uploadInterval",
+)
+
+# The intervals the backend serves standby power for.
 STANDBY_INTERVALS = ("daily", "weekly", "monthly", "yearly")
 
 # Lookback window for standby requests. 35 days reliably covers the last
@@ -162,21 +176,12 @@ class ObiEnergyTrackerAPI:
                     _LOGGER.error("Could not find bridge_id or device_id")
                     return None
 
+                sensor = selected_sensor or {}
+
                 return {
                     "bridge_id": self.bridge_id,
                     "device_id": self.device_id,
-                    "batteryLevel": selected_sensor.get("batteryLevel")
-                    if selected_sensor
-                    else None,
-                    "isOnline": selected_sensor.get("isOnline")
-                    if selected_sensor
-                    else None,
-                    "connectionStrength": selected_sensor.get("connectionStrength")
-                    if selected_sensor
-                    else None,
-                    "lastRecordReceivedAt": selected_sensor.get("lastRecordReceivedAt")
-                    if selected_sensor
-                    else None,
+                    **{key: sensor.get(key) for key in SENSOR_DETAIL_FIELDS},
                 }
         except (jwt.DecodeError, OSError, ClientError) as err:
             _LOGGER.error("Error getting bridge info: %s", err)
@@ -188,12 +193,7 @@ class ObiEnergyTrackerAPI:
         if not bridge_info:
             return None
 
-        return {
-            "batteryLevel": bridge_info.get("batteryLevel"),
-            "isOnline": bridge_info.get("isOnline"),
-            "connectionStrength": bridge_info.get("connectionStrength"),
-            "lastRecordReceivedAt": bridge_info.get("lastRecordReceivedAt"),
-        }
+        return {key: bridge_info.get(key) for key in SENSOR_DETAIL_FIELDS}
 
     async def async_get_hourly_data(
         self,

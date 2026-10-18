@@ -31,6 +31,9 @@ The integration retrieves:
 - Online Status
 - Connection Strength
 - Last Record Received At
+- Firmware and Hardware Version
+- OTA Status and Progress
+- Upload Interval
 - Weekly and Monthly Consumption Forecast
 - Standby Power (daily, weekly, monthly, yearly)
 
@@ -46,7 +49,6 @@ revised in both directions, so these carry `state_class: total` rather than
 
 `Standby Power` is the average power drawn over the last completed day, week,
 month or year, in watts - despite the app calling it standby *consumption*.
-Only these four intervals exist; the backend answers 400 for anything shorter.
 
 All six are best-effort: if the analytics endpoints fail, the meter sensors
 keep working and only these go unavailable.

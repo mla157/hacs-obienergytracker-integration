@@ -11,6 +11,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -41,6 +42,11 @@ async def async_setup_entry(
         ObiIsOnlineSensor(coordinator),
         ObiConnectionStrengthSensor(coordinator),
         ObiLastRecordReceivedAtSensor(coordinator),
+        ObiFirmwareVersionSensor(coordinator),
+        ObiHardwareVersionSensor(coordinator),
+        ObiOtaStatusSensor(coordinator),
+        ObiOtaProgressSensor(coordinator),
+        ObiUploadIntervalSensor(coordinator),
         ObiForecastWeeklySensor(coordinator),
         ObiForecastMonthlySensor(coordinator),
         ObiStandbyDailySensor(coordinator),
@@ -225,6 +231,67 @@ class ObiLastRecordReceivedAtSensor(ObiDeviceValueSensorBase):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
+
+
+class ObiFirmwareVersionSensor(ObiDeviceValueSensorBase):
+    """Sensor for the firmware version of the sensor puck."""
+
+    _attr_unique_id = "obi_firmware_version"
+    _attr_translation_key = "firmware_version"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _device_key = "firmwareVersion"
+
+
+class ObiHardwareVersionSensor(ObiDeviceValueSensorBase):
+    """Sensor for the hardware version of the sensor puck."""
+
+    _attr_unique_id = "obi_hardware_version"
+    _attr_translation_key = "hardware_version"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _device_key = "hardwareVersion"
+
+
+class ObiOtaStatusSensor(ObiDeviceValueSensorBase):
+    """Sensor for the over-the-air update status, e.g. NOT_UPDATING."""
+
+    _attr_unique_id = "obi_ota_status"
+    _attr_translation_key = "ota_status"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:cloud-download-outline"
+    _device_key = "otaStatus"
+
+
+class ObiOtaProgressSensor(ObiDeviceValueSensorBase):
+    """Sensor for over-the-air update progress.
+
+    The API reports null outside of an update, so this stays unknown until
+    one is actually running.
+    """
+
+    _attr_unique_id = "obi_ota_progress"
+    _attr_translation_key = "ota_progress"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_icon = "mdi:cloud-download-outline"
+    _device_key = "otaProgress"
+
+
+class ObiUploadIntervalSensor(ObiDeviceValueSensorBase):
+    """Sensor for how often the puck currently reports to the backend.
+
+    Worth surfacing because live mode works by changing this value: it shows
+    whether the sensor really went to its two-second interval, and whether it
+    was put back to 300 afterwards.
+    """
+
+    _attr_unique_id = "obi_upload_interval"
+    _attr_translation_key = "upload_interval"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_icon = "mdi:timer-outline"
+    _device_key = "uploadInterval"
 
 
 class ObiForecastSensorBase(ObiEnergySensorBase):

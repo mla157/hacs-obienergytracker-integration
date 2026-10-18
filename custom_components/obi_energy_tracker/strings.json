@@ -51,6 +51,21 @@
        "last_record_received_at": {
          "name": "Letzter Datensatz empfangen um"
        },
+       "firmware_version": {
+         "name": "Firmware-Version"
+       },
+       "hardware_version": {
+         "name": "Hardware-Version"
+       },
+       "ota_status": {
+         "name": "OTA-Status"
+       },
+       "ota_progress": {
+         "name": "OTA-Fortschritt"
+       },
+       "upload_interval": {
+         "name": "Übertragungsintervall"
+       },
        "forecast_weekly": {
          "name": "Wöchentliche Verbrauchsprognose"
        },
