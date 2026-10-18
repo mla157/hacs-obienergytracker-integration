@@ -31,6 +31,25 @@ The integration retrieves:
 - Online Status
 - Connection Strength
 - Last Record Received At
+- Weekly and Monthly Consumption Forecast
+- Standby Power (daily, weekly, monthly, yearly)
+
+### Analytics sensors
+
+The backend also serves the forecast and standby figures the heyOBI app shows
+under its statistics tab.
+
+`Weekly Consumption Forecast` and `Monthly Consumption Forecast` are the
+backend's projection for the current period, in watt-hours. A forecast is
+revised in both directions, so these carry `state_class: total` rather than
+`total_increasing`.
+
+`Standby Power` is the average power drawn over the last completed day, week,
+month or year, in watts - despite the app calling it standby *consumption*.
+Only these four intervals exist; the backend answers 400 for anything shorter.
+
+All six are best-effort: if the analytics endpoints fail, the meter sensors
+keep working and only these go unavailable.
 
 ### Live mode
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 from typing import Any
@@ -21,6 +21,21 @@ ENERGY_TRACKING_URL = "https://energy-tracking-backend.prod-eks.dbs.obi.solution
 LIVE_API_BASE = "https://api.obi.com/energytracker/api"
 LIVE_WS_URL = "wss://api.obi.com/energytracker/api-livemode/retrieving"
 SENSOR_MEDIA_TYPE = "application/vnd.obi.companion.energy-tracking.sensor.v2+json"
+
+FORECAST_MEDIA_TYPE = (
+    "application/vnd.obi.companion.energy-tracking.analytics-forecast.v1+json"
+)
+STANDBY_MEDIA_TYPE = (
+    "application/vnd.obi.companion.energy-tracking.analytics-standby.v1+json"
+)
+
+# Standby power is only served for these intervals. quarterhour, minutely,
+# raw and live were probed against the live API and answer HTTP 400.
+STANDBY_INTERVALS = ("daily", "weekly", "monthly", "yearly")
+
+# Lookback window for standby requests. 35 days reliably covers the last
+# completed month, which is the longest period the monthly interval needs.
+STANDBY_DURATION = "P35D"
 
 
 class ObiEnergyTrackerAPI:
@@ -271,9 +286,89 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Error getting meter data: %s", err)
             return None
 
-    def _get_auth_headers(self) -> dict[str, str]:
+    async def async_get_consumption_forecast(self) -> dict[str, Any] | None:
+        """Get the weekly and monthly consumption forecast.
+
+        The response carries consumptionForecastWeekly and
+        consumptionForecastMonthly, both in watt-hours.
+        """
+        if not self.token or not self.bridge_id or not self.device_id:
+            return None
+
+        url = (
+            f"{ENERGY_TRACKING_URL}/analytics/"
+            f"{self.bridge_id}/{self.device_id}/forecast"
+        )
+        headers = self._get_auth_headers(FORECAST_MEDIA_TYPE)
+
+        try:
+            async with self.session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    _LOGGER.debug(
+                        "Failed to get consumption forecast: %d", response.status
+                    )
+                    return None
+
+                data = await response.json()
+                if not isinstance(data, dict):
+                    _LOGGER.debug(
+                        "Unexpected forecast response type: %s", type(data).__name__
+                    )
+                    return None
+                return data
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error getting consumption forecast: %s", err)
+            return None
+
+    async def async_get_standby_power(
+        self, interval: str
+    ) -> list[dict[str, Any]] | None:
+        """Get average standby power records for one completed-period interval.
+
+        Despite the "standby consumption" wording the app uses, the API
+        returns a power value in watts, not an energy total.
+        """
+        if not self.token or not self.bridge_id or not self.device_id:
+            return None
+
+        url = (
+            f"{ENERGY_TRACKING_URL}/analytics/"
+            f"{self.bridge_id}/{self.device_id}/{interval}/standby"
+        )
+
+        # The window has to be sent as an ISO 8601 interval; the backend
+        # rejects a bare duration.
+        start = datetime.now(UTC) - timedelta(days=35)
+        start_str = start.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        params = {"duration": f"{start_str}/{STANDBY_DURATION}"}
+        headers = self._get_auth_headers(STANDBY_MEDIA_TYPE)
+
+        try:
+            async with self.session.get(
+                url, params=params, headers=headers
+            ) as response:
+                if response.status != 200:
+                    _LOGGER.debug(
+                        "Failed to get %s standby power: %d", interval, response.status
+                    )
+                    return None
+
+                data = await response.json()
+                if not isinstance(data, list):
+                    _LOGGER.debug(
+                        "Unexpected %s standby response type: %s",
+                        interval,
+                        type(data).__name__,
+                    )
+                    return None
+                return data
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error getting %s standby power: %s", interval, err)
+            return None
+
+    def _get_auth_headers(self, accept: str | None = None) -> dict[str, str]:
         """Get headers with authorization token."""
-        accept_header = (
+        accept_header = accept or (
             "application/vnd.obi.companion.energy-tracking.historical-record.v1+json"
         )
         return {

@@ -50,6 +50,24 @@
             },
             "last_record_received_at": {
                 "name": "Last Record Received At"
+            },
+            "forecast_weekly": {
+                "name": "Weekly Consumption Forecast"
+            },
+            "forecast_monthly": {
+                "name": "Monthly Consumption Forecast"
+            },
+            "standby_daily": {
+                "name": "Standby Power Daily"
+            },
+            "standby_weekly": {
+                "name": "Standby Power Weekly"
+            },
+            "standby_monthly": {
+                "name": "Standby Power Monthly"
+            },
+            "standby_yearly": {
+                "name": "Standby Power Yearly"
             }
         },
         "switch": {

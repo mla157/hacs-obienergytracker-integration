@@ -9,7 +9,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import ObiEnergyTrackerAPI
+from .api import STANDBY_INTERVALS, ObiEnergyTrackerAPI
 from .const import DOMAIN, LIVE_TIMEOUT
 from .live import ObiLiveMode
 
@@ -45,6 +45,7 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Retrieves:
         - Meter reading (Zählerstand) for the device
         - Hourly energy data for the past 7 days
+        - Consumption forecast and standby power, both best-effort
         """
         try:
             meter = await self.api.async_get_meter_data()
@@ -73,8 +74,19 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.error("Failed to update data: %s", err)
             raise UpdateFailed(f"Failed to update data: {err}") from err
 
+        # Analytics are supplementary: the API client returns None on failure
+        # so that a missing forecast never takes the meter sensors down.
+        forecast = await self.api.async_get_consumption_forecast() or {}
+
+        standby = {
+            interval: await self.api.async_get_standby_power(interval)
+            for interval in STANDBY_INTERVALS
+        }
+
         return {
             "hourly": hourly_data,
             "meter": meter,
             "device": device,
+            "forecast": forecast,
+            "standby": standby,
         }
