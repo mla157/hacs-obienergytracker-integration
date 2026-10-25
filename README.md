@@ -1,63 +1,85 @@
 # "OBI Energy Tracker" - HACS Integration
-This integration allows you to monitor your **OBI Energy Tracker** device directly within Home Assistant. The OBI Energy Tracker is a cost-effective solution for reading smart energy meters, typically accessed via the heyOBI smartphone application.e.
+
+This integration allows you to monitor your **OBI Energy Tracker** device directly within Home Assistant. The OBI Energy Tracker is a cost-effective solution for reading smart energy meters, typically accessed via the heyOBI smartphone application.
 
 ## Installation
 
-Add this repository, via custom repository: https://www.hacs.xyz/docs/faq/custom_repositories/
+Add this repository via custom repository in HACS: https://www.hacs.xyz/docs/faq/custom_repositories/
 
 ## OBI Energy Tracker
 
 <img src="https://bilder.obi.de/d9c6b340-b37f-48fd-92f2-72114bad03ad/prZZK/image.jpeg" width="200" alt="Energy Tracker Device">
 
-The "OBI Energy Tracker" is a low cost device to read out smart energy meters. In default you can access the data in the "heyOBI" application on our smartphone.
-I extracted the API Calls from the backend of the application, and created this "Home Assistant" Integration.
+The "OBI Energy Tracker" is a low cost device to read out smart energy meters.
 
 ## Configuration
 
-During setup, you'll need:
+Setting up the integration uses standard **OAuth2 with PKCE** via `auth.obi.com`:
 
-- **Email**: Your "OBI" account email address
-- **Password**: Your "OBI" account password
-- **Country**: Country code (default: DE for Germany)
+1. Go to **Settings** -> **Devices & Services** -> **Add Integration** in Home Assistant.
+2. Search for **OBI Energy Tracker**.
+3. You will be redirected to the secure OBI login window (`auth.obi.com`).
+4. Log in with your OBI account.
+5. Home Assistant is granted access without storing your password.
 
 ## API Details
 
 The integration retrieves:
 
-- Meter Reading
-- Feed-In Meter Reading
+- Meter Reading (`Wh`)
+- Feed-In Meter Reading (`Wh`)
 - Live Power (see below)
-- Battery Level
+- Battery Level (`%`)
 - Online Status
 - Connection Strength
 - Last Record Received At
+- Firmware and Hardware Version
+- OTA Status and Progress
+- Upload Interval
+- Weekly and Monthly Consumption Forecast
+- Standby Power (daily, weekly, monthly, yearly)
+
+### Analytics sensors
+
+The backend also serves the forecast and standby figures the heyOBI app shows
+under its statistics tab.
+
+`Weekly Consumption Forecast` and `Monthly Consumption Forecast` are the
+backend's projection for the current period, in watt-hours. A forecast is
+revised in both directions, so these carry `state_class: total` rather than
+`total_increasing`.
+
+`Standby Power` is the average power drawn over the last completed day, week,
+month or year, in watts - despite the app calling it standby *consumption*.
+
+All six are best-effort: if the analytics endpoints fail, the meter sensors
+keep working and only these go unavailable.
+
+### Polling & Backend Efficiency
+- **Authentication**: Official OAuth2 via `auth.obi.com` with PKCE; tokens are refreshed automatically.
+- **Meter reading**: Fetched every 5 minutes with a 15-minute window (`PT15M`), matching the device upload frequency.
+- **Device metadata**: Battery, online status, and connection strength are cached and refreshed every 30 minutes.
+- **Identification**: Requests identify as `HomeAssistant-ObiEnergyTracker-Integration`.
 
 ### Live mode
 
-The heyOBI app shows a real-time power value, and this integration can do the
-same. It is a **switch**, not an always-on sensor, because live mode works by
-lowering the sensor's upload interval from 300 to 2 seconds - and that sensor
-runs on a battery.
+The heyOBI app shows a real-time power value, and this integration can do the same. It is a **switch**, not an always-on sensor, because live mode works by lowering the sensor's upload interval from 300 to 2 seconds - and that sensor runs on a battery.
 
-Switch `Live mode` on and the `Live Power` sensor updates every two seconds.
-Switch it off, let it time out, reload the integration or shut Home Assistant
-down, and the upload interval goes back to 300 seconds.
+Switch `Live mode` on and the `Live Power` sensor updates every two seconds. Switch it off, let it time out, reload the integration or shut Home Assistant down, and the upload interval goes back to 300 seconds.
 
-The timeout defaults to 10 minutes and can be changed in the integration's
-options; `0` disables it. Leaving live mode on permanently will drain the
-sensor battery, so do that deliberately.
+The timeout defaults to 10 minutes; leaving live mode on permanently will drain the sensor battery.
 
 ## Bruno
 
-Unofficial API for the "heyOBI" backend, as used in this repository. The endpoints are not officially documented.
-
-### Procedure
-
-1. Perform **Login** → sets `token` (JWT) and `userId` (from the JWT payload).
-2. Perform **Get bridge info** → sets `bridgeId` and `deviceId` based on the first
-   linked sensor.
-3. After that, **Get hourly data** and **Get meter data** can be called...
+Unofficial API collection for the heyOBI backend as used during reverse engineering.
 
 ---
 
-*Disclaimer: This integration is not affiliated with or endorsed by OBI. Use at your own risk.*
+*Disclaimer: This integration is a community project and is not officially affiliated with or endorsed by OBI. For the official integration, see [OBI-Smart-Technologies/energy-tracker-integration-home-assistant](https://github.com/OBI-Smart-Technologies/energy-tracker-integration-home-assistant).*
+
+> [!NOTE]
+> ### Official Integration Available
+> OBI has released an official Home Assistant integration:
+> **[OBI-Smart-Technologies/energy-tracker-integration-home-assistant](https://github.com/OBI-Smart-Technologies/energy-tracker-integration-home-assistant)**
+>
+> Both integrations use the domain `obi_energy_tracker`. If you want to use the official integration instead, please uninstall this custom repository first.

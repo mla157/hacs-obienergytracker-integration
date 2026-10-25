@@ -191,7 +191,8 @@ class ObiLiveMode:
         """Hold one websocket connection and apply the frames it delivers."""
         loop = asyncio.get_running_loop()
 
-        async with self.api.live_ws_connect() as websocket:
+        token = await self.api.async_get_token()
+        async with self.api.live_ws_connect(token) as websocket:
             self.connected = True
             self.last_error = None
             self._notify()

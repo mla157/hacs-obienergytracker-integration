@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "OBI Energy Tracker"
+      },
+      "reauth_confirm": {
+        "title": "OBI Energy Tracker neu authentifizieren",
+        "description": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut über OBI an, um fortzufahren."
+      }
+    },
+    "abort": {
+      "already_configured": "Dieses OBI-Konto ist in Home Assistant bereits eingerichtet",
+      "cannot_connect": "Der OBI Energy Tracker Dienst ist nicht erreichbar. Bitte die Internetverbindung prüfen.",
+      "oauth_error": "Ungültige Authentifizierungs-Token von OBI empfangen.",
+      "wrong_account": "Bitte melden Sie sich mit demselben OBI-Konto an, mit dem diese Integration eingerichtet wurde.",
+      "reauth_successful": "Neuauthentifizierung erfolgreich"
+    },
+    "create_entry": {
+      "default": "Erfolgreich mit OBI Energy Tracker verbunden"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Von OBI Energy Tracker abmelden",
+        "description": "Beendet die Sitzung bei OBI und widerruft die gespeicherten Token. Anschließend werden Sie zur erneuten Anmeldung aufgefordert. Geräte, Entitäten und der Verlauf bleiben erhalten."
+      }
+    },
+    "abort": {
+      "logged_out": "Abgemeldet. Melden Sie sich über die Benachrichtigung erneut an, um die Integration weiter zu nutzen."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "is_online": {
+        "name": "Online-Status"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Bridge Firmware"
+      }
+    },
+    "sensor": {
+      "meter_reading": {
+        "name": "Zählerstand Netzbezug"
+      },
+      "feed_in_meter_reading": {
+        "name": "Zählerstand Netzeinspeisung"
+      },
+      "live_power": {
+        "name": "Aktuelle Leistung (Live)"
+      },
+      "battery_level": {
+        "name": "Batteriestand"
+      },
+      "is_online": {
+        "name": "Online-Status"
+      },
+      "connection_strength": {
+        "name": "Verbindungsstärke"
+      },
+      "last_record_received_at": {
+        "name": "Letzter Datensatz empfangen um"
+      },
+      "firmware_version": {
+        "name": "Firmware-Version"
+      },
+      "hardware_version": {
+        "name": "Hardware-Version"
+      },
+      "ota_status": {
+        "name": "OTA-Status"
+      },
+      "ota_progress": {
+        "name": "OTA-Fortschritt"
+      },
+      "upload_interval": {
+        "name": "Übertragungsintervall"
+      },
+      "forecast_weekly": {
+        "name": "Wöchentliche Verbrauchsprognose"
+      },
+      "forecast_monthly": {
+        "name": "Monatliche Verbrauchsprognose"
+      },
+      "standby_daily": {
+        "name": "Standby-Leistung täglich"
+      },
+      "standby_weekly": {
+        "name": "Standby-Leistung wöchentlich"
+      },
+      "standby_monthly": {
+        "name": "Standby-Leistung monatlich"
+      },
+      "standby_yearly": {
+        "name": "Standby-Leistung jährlich"
+      }
+    },
+    "switch": {
+      "live_mode": {
+        "name": "Live-Modus"
+      }
+    }
+  }
+}

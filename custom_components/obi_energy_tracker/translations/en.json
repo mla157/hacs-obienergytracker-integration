@@ -1,61 +1,107 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Account is already configured"
-        },
-        "create_entry": {
-            "default": "Successfully connected to OBI EnergyTracker to your home assistant instance"
-        },
-        "error": {
-            "connection_error": "Failed to connect to OBI backend service",
-            "invalid_auth": "Invalid email or password",
-            "no_devices": "No OBI EnergyTracker devices found in your account"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "country": "Country code",
-                    "email": "Email address",
-                    "password": "Password"
-                },
-                "data_description": {
-                    "country": "The country where your account is registered (e.g., DE)",
-                    "email": "Your OBI account email",
-                    "password": "Your OBI account password"
-                },
-                "description": "Enter your OBI account credentials",
-                "title": "Connect to (hey)OBI"
-            }
-        }
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "OBI Energy Tracker"
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate OBI Energy Tracker",
+        "description": "Your session has expired or requires renewal. Please sign in via OBI to continue."
+      }
     },
-    "entity": {
-        "sensor": {
-            "meter_reading": {
-                "name": "Meter Reading"
-            },
-            "feed_in_meter_reading": {
-                "name": "Feed-in Meter Reading"
-            },
-            "live_power": {
-                "name": "Live Power"
-            },
-            "battery_level": {
-                "name": "Battery Level"
-            },
-            "is_online": {
-                "name": "Online Status"
-            },
-            "connection_strength": {
-                "name": "Connection Strength"
-            },
-            "last_record_received_at": {
-                "name": "Last Record Received At"
-            }
-        },
-        "switch": {
-            "live_mode": {
-                "name": "Live Mode"
-            }
-        }
+    "abort": {
+      "already_configured": "This OBI account is already configured in Home Assistant",
+      "cannot_connect": "Could not connect to the OBI Energy Tracker service. Please check your internet connection.",
+      "oauth_error": "Received invalid authentication token from OBI.",
+      "wrong_account": "Please log in with the same OBI account this integration was set up with.",
+      "reauth_successful": "Re-authentication was successful"
+    },
+    "create_entry": {
+      "default": "Successfully connected to OBI Energy Tracker"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Log out of OBI Energy Tracker",
+        "description": "Ends the OBI session and revokes the stored tokens. You will then be asked to log in again. Devices, entities and history are kept."
+      }
+    },
+    "abort": {
+      "logged_out": "Logged out. Use the notification to log in again and keep using the integration."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "is_online": {
+        "name": "Online Status"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Bridge Firmware"
+      }
+    },
+    "sensor": {
+      "meter_reading": {
+        "name": "Meter Reading (Grid Consumption)"
+      },
+      "feed_in_meter_reading": {
+        "name": "Feed-In Meter Reading"
+      },
+      "live_power": {
+        "name": "Current Power (Live)"
+      },
+      "battery_level": {
+        "name": "Battery Level"
+      },
+      "is_online": {
+        "name": "Online Status"
+      },
+      "connection_strength": {
+        "name": "Connection Strength"
+      },
+      "last_record_received_at": {
+        "name": "Last Record Received At"
+      },
+      "firmware_version": {
+        "name": "Firmware Version"
+      },
+      "hardware_version": {
+        "name": "Hardware Version"
+      },
+      "ota_status": {
+        "name": "OTA Status"
+      },
+      "ota_progress": {
+        "name": "OTA Progress"
+      },
+      "upload_interval": {
+        "name": "Upload Interval"
+      },
+      "forecast_weekly": {
+        "name": "Weekly Consumption Forecast"
+      },
+      "forecast_monthly": {
+        "name": "Monthly Consumption Forecast"
+      },
+      "standby_daily": {
+        "name": "Standby Power Daily"
+      },
+      "standby_weekly": {
+        "name": "Standby Power Weekly"
+      },
+      "standby_monthly": {
+        "name": "Standby Power Monthly"
+      },
+      "standby_yearly": {
+        "name": "Standby Power Yearly"
+      }
+    },
+    "switch": {
+      "live_mode": {
+        "name": "Live Mode"
+      }
+    }
+  }
 }
