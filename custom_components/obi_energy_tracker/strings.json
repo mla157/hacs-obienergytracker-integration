@@ -32,32 +32,42 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "is_online": {
+        "name": "Online Status"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Bridge Firmware"
+      }
+    },
     "sensor": {
       "meter_reading": {
-        "name": "Zählerstand Netzbezug"
+        "name": "Meter Reading (Grid Consumption)"
       },
       "feed_in_meter_reading": {
-        "name": "Zählerstand Netzeinspeisung"
+        "name": "Feed-In Meter Reading"
       },
       "live_power": {
-        "name": "Aktuelle Leistung (Live)"
+        "name": "Current Power (Live)"
       },
       "battery_level": {
-        "name": "Batteriestand"
+        "name": "Battery Level"
       },
       "is_online": {
-        "name": "Online-Status"
+        "name": "Online Status"
       },
       "connection_strength": {
-        "name": "Verbindungsstärke"
+        "name": "Connection Strength"
       },
       "last_record_received_at": {
-        "name": "Letzter Datensatz empfangen um"
+        "name": "Last Record Received At"
       }
     },
     "switch": {
       "live_mode": {
-        "name": "Live-Modus"
+        "name": "Live Mode"
       }
     }
   }

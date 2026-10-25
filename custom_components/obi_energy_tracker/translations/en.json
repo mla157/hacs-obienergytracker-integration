@@ -32,6 +32,16 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "is_online": {
+        "name": "Online Status"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Bridge Firmware"
+      }
+    },
     "sensor": {
       "meter_reading": {
         "name": "Meter Reading"

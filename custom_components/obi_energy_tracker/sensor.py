@@ -34,7 +34,7 @@ async def async_setup_entry(
     coordinator = config_entry.runtime_data
 
     sensors: list[SensorEntity] = [
-        ObiLivePowerSensor(coordinator.live),
+        ObiLivePowerSensor(coordinator),
         ObiMeterReadingSensor(coordinator),
         ObiFeedInMeterReadingSensor(coordinator),
         ObiBatteryLevelSensor(coordinator),
@@ -84,18 +84,29 @@ class ObiEnergySensorBase(CoordinatorEntity[ObiEnergyTrackerCoordinator], Sensor
     def __init__(self, coordinator: ObiEnergyTrackerCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "obi_energy_tracker")},
-            "name": "Obi EnergyTracker",
-            "manufacturer": "Obi",
+        device_id = coordinator.api.device_id or "sensor"
+        bridge_id = coordinator.api.bridge_id
+        device_info: dict[str, Any] = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": "OBI Energy Tracker Sensor",
+            "manufacturer": "OBI",
+            "model": "Energy Tracker Sensor",
         }
+        if bridge_id:
+            device_info["via_device"] = (DOMAIN, bridge_id)
+        self._attr_device_info = device_info
 
 
 class ObiMeterSensorBase(ObiEnergySensorBase):
-    """Base sensor for cumulative meter readings (Zählerstand)."""
+    """Base sensor for cumulative meter readings (Zählerstand).
+
+    Note: Long-term statistics for the HA Energy dashboard are written directly
+    as external statistics by the coordinator. Leaving state_class as None ensures
+    the recorder does not compile competing entity statistics that cause baseline drift
+    or negative spikes in the Energy dashboard.
+    """
 
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "Wh"
     _measure: str
 
@@ -118,11 +129,6 @@ class ObiMeterSensorBase(ObiEnergySensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the meter reading value for this sensor's measure."""
-        _LOGGER.debug(
-            "%s native_value called. Data: %s",
-            type(self).__name__,
-            self.coordinator.data,
-        )
         if not self.coordinator.data:
             return None
 
@@ -237,14 +243,20 @@ class ObiLivePowerSensor(SensorEntity):
     _attr_native_unit_of_measurement = "W"
     _attr_suggested_display_precision = 0
 
-    def __init__(self, live: ObiLiveMode) -> None:
+    def __init__(self, coordinator: ObiEnergyTrackerCoordinator) -> None:
         """Initialize the sensor."""
-        self._live = live
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "obi_energy_tracker")},
-            "name": "Obi EnergyTracker",
-            "manufacturer": "Obi",
+        self._live = coordinator.live
+        device_id = coordinator.api.device_id or "sensor"
+        bridge_id = coordinator.api.bridge_id
+        device_info: dict[str, Any] = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": "OBI Energy Tracker Sensor",
+            "manufacturer": "OBI",
+            "model": "Energy Tracker Sensor",
         }
+        if bridge_id:
+            device_info["via_device"] = (DOMAIN, bridge_id)
+        self._attr_device_info = device_info
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to live mode updates."""

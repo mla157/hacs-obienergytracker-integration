@@ -10,6 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ObiEnergyTrackerAPI
@@ -19,7 +20,12 @@ from .oauth2 import KeycloakOAuth2Implementation, oauth_token_provider
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.BINARY_SENSOR,
+    Platform.UPDATE,
+]
 
 ObiEnergyTrackerConfigEntry: TypeAlias = ConfigEntry[ObiEnergyTrackerCoordinator]
 
@@ -65,6 +71,25 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+
+    # Register Bridge gateway device in HA device registry
+    if api.bridge_id:
+        device_reg = dr.async_get(hass)
+        device_info = coordinator.data.get("device") or {}
+        device_reg.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, api.bridge_id)},
+            name="OBI Energy Tracker Bridge",
+            manufacturer="OBI",
+            model="Energy Tracker Bridge",
+            sw_version=device_info.get("firmwareVersion"),
+            hw_version=device_info.get("hardwareVersion"),
+        )
+
+    # Launch background import of historical statistics for HA Energy Dashboard
+    entry.async_create_background_task(
+        hass, coordinator.async_import_history(), f"{DOMAIN}_import_history"
+    )
 
     # Forward entry setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

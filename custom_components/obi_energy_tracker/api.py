@@ -143,6 +143,8 @@ class ObiEnergyTrackerAPI:
                 return {
                     "bridge_id": self.bridge_id,
                     "device_id": self.device_id,
+                    "firmwareVersion": bridge.get("firmwareVersion"),
+                    "hardwareVersion": bridge.get("hardwareVersion"),
                     "batteryLevel": selected_sensor.get("batteryLevel")
                     if selected_sensor
                     else None,
@@ -171,9 +173,13 @@ class ObiEnergyTrackerAPI:
             "isOnline": bridge_info.get("isOnline"),
             "connectionStrength": bridge_info.get("connectionStrength"),
             "lastRecordReceivedAt": bridge_info.get("lastRecordReceivedAt"),
+            "firmwareVersion": bridge_info.get("firmwareVersion"),
+            "hardwareVersion": bridge_info.get("hardwareVersion"),
         }
 
-    async def async_get_meter_data(self) -> dict[str, Any] | None:
+    async def async_get_meter_data(
+        self, window: timedelta | None = None
+    ) -> dict[str, Any] | None:
         """Get meter reading data (Zählerstand).
 
         Uses a short window (default 15 minutes) that matches the device's
@@ -184,10 +190,11 @@ class ObiEnergyTrackerAPI:
             if not token or not self.bridge_id or not self.device_id:
                 return None
 
+            target_window = window or METER_WINDOW
             now = datetime.now(timezone.utc)
-            start_time = now - METER_WINDOW
+            start_time = now - target_window
             start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-            window_minutes = int(METER_WINDOW.total_seconds() // 60)
+            window_minutes = int(target_window.total_seconds() // 60)
             duration_str = f"{start_time_str}/PT{window_minutes}M"
 
             url = (
@@ -225,6 +232,94 @@ class ObiEnergyTrackerAPI:
             "Authorization": f"Bearer {token}",
             "Connection": "Keep-Alive",
         }
+
+    async def async_get_energy_consumer(
+        self, device_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """Get energy consumer pricing and tariff info (kwh_price, feed_in_compensation)."""
+        target_id = device_id or self.device_id
+        if not target_id:
+            return None
+
+        try:
+            token = await self.async_get_token()
+            if not token:
+                return None
+
+            url = f"{ENERGY_TRACKING_URL}/energy-consumers/{target_id}"
+            headers = {
+                "Accept": "application/vnd.obi.companion.energy-tracking.energy-consumer.v1+json",
+                "Accept-Encoding": "gzip",
+                "User-Agent": HA_USER_AGENT,
+                "Authorization": f"Bearer {token}",
+                "Connection": "Keep-Alive",
+            }
+
+            async with self.session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                return None
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error getting energy consumer for %s: %s", target_id, err)
+            return None
+
+    async def async_get_bridge_firmware_update(
+        self, bridge_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """Check for pending firmware updates for the bridge."""
+        target_bridge = bridge_id or self.bridge_id
+        if not target_bridge:
+            return None
+
+        try:
+            token = await self.async_get_token()
+            if not token:
+                return None
+
+            url = f"{ENERGY_TRACKING_URL}/bridges/{target_bridge}/firmware-update"
+            headers = {
+                "Accept": "application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
+                "Accept-Encoding": "gzip",
+                "User-Agent": HA_USER_AGENT,
+                "Authorization": f"Bearer {token}",
+                "Connection": "Keep-Alive",
+            }
+
+            async with self.session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                return None
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error checking firmware update for %s: %s", target_bridge, err)
+            return None
+
+    async def async_trigger_bridge_firmware_update(
+        self, firmware_id: str, bridge_id: str | None = None
+    ) -> bool:
+        """Trigger an over-the-air firmware update for the bridge."""
+        target_bridge = bridge_id or self.bridge_id
+        if not target_bridge or not firmware_id:
+            return False
+
+        try:
+            token = await self.async_get_token()
+            if not token:
+                return False
+
+            url = f"{ENERGY_TRACKING_URL}/bridges/{target_bridge}/firmware-update/{firmware_id}"
+            headers = {
+                "Accept": "application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
+                "Accept-Encoding": "gzip",
+                "User-Agent": HA_USER_AGENT,
+                "Authorization": f"Bearer {token}",
+                "Connection": "Keep-Alive",
+            }
+
+            async with self.session.post(url, headers=headers) as response:
+                return response.status in (200, 202, 204)
+        except (OSError, ClientError) as err:
+            _LOGGER.error("Error triggering firmware update: %s", err)
+            return False
 
     async def async_set_upload_interval(self, interval: int) -> bool:
         """Set the sensor's upload interval, which is what drives live mode.
