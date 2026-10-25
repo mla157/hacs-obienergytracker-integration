@@ -34,20 +34,24 @@ METER_WINDOW = timedelta(minutes=15)
 TokenProvider: TypeAlias = Callable[[], Awaitable[str]]
 
 
-def extract_account_id(access_token: str) -> str | None:
-    """Extract accountId claim from a JWT access token without external dependencies."""
-    parts = access_token.split(".")
+def extract_jwt_claims(token: str) -> dict[str, Any]:
+    """Extract claims dictionary from a JWT token without external dependencies."""
+    parts = token.split(".")
     if len(parts) < 2:
-        return None
-    payload = parts[1] + "=" * (4 - len(parts[1]) % 4)
+        return {}
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
     try:
         claims = json.loads(base64.urlsafe_b64decode(payload))
     except (ValueError, TypeError):
-        return None
-    if not isinstance(claims, dict):
-        return None
-    account_id = claims.get("accountId")
-    return account_id if isinstance(account_id, str) else None
+        return {}
+    return claims if isinstance(claims, dict) else {}
+
+
+def extract_account_id(access_token: str) -> str | None:
+    """Extract accountId claim from a JWT access token without external dependencies."""
+    claims = extract_jwt_claims(access_token)
+    account_id = claims.get("accountId") or claims.get("sub")
+    return str(account_id) if account_id is not None else None
 
 
 class ObiEnergyTrackerAPI:

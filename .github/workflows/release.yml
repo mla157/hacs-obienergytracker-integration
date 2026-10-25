@@ -1,0 +1,53 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Select branch configuration
+        id: branch_config
+        run: |
+          if [ "${{ github.ref_name }}" = "dev" ]; then
+            echo "config_file=release-please-config.dev.json" >> $GITHUB_OUTPUT
+            echo "manifest_file=.release-please-manifest.dev.json" >> $GITHUB_OUTPUT
+          else
+            echo "config_file=release-please-config.json" >> $GITHUB_OUTPUT
+            echo "manifest_file=.release-please-manifest.json" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ steps.branch_config.outputs.config_file }}
+          manifest-file: ${{ steps.branch_config.outputs.manifest_file }}
+
+      - name: Checkout repository
+        if: ${{ steps.release.outputs.releases_created }}
+        uses: actions/checkout@v4
+
+      - name: Build HACS zip archive
+        if: ${{ steps.release.outputs.releases_created }}
+        run: |
+          zip -r obi_energy_tracker.zip custom_components/obi_energy_tracker
+
+      - name: Upload zip asset to GitHub Release
+        if: ${{ steps.release.outputs.releases_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: |
+          gh release upload "$TAG_NAME" obi_energy_tracker.zip --clobber
+
