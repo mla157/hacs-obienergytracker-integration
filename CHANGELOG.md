@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.2.0...obi_energy_tracker-0.3.0) (2026-10-25)
+
+
+### Features
+
+* Enhance OBI Energy Tracker integration with new binary sensor and update platform ([48e44f7](https://github.com/mla157/hacs-obienergytracker-integration/commit/48e44f794ca78e32a468647eb5c5103284e0dbe4))
+
 ## [0.2.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.1.0...obi_energy_tracker-0.2.0) (2026-10-25)
 
 
