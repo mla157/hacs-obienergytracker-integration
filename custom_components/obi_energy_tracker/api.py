@@ -22,14 +22,43 @@ LIVE_API_BASE = "https://api.obi.com/energytracker/api"
 LIVE_WS_URL = "wss://api.obi.com/energytracker/api-livemode/retrieving"
 SENSOR_MEDIA_TYPE = "application/vnd.obi.companion.energy-tracking.sensor.v2+json"
 
+FORECAST_MEDIA_TYPE = (
+    "application/vnd.obi.companion.energy-tracking.analytics-forecast.v1+json"
+)
+STANDBY_MEDIA_TYPE = (
+    "application/vnd.obi.companion.energy-tracking.analytics-standby.v1+json"
+)
+
 # Identify ourselves honestly as a Home Assistant integration rather than
 # impersonating the heyOBI mobile application.
 HA_USER_AGENT = "HomeAssistant-ObiEnergyTracker-Integration"
 
-# The meter window only needs to cover the gap since the last poll.  The
+# The meter window only needs to cover the gap since the last poll. The
 # devices upload roughly every 5 minutes, so a 15-minute window is enough to
 # always catch the latest reading without requesting hours of data we discard.
 METER_WINDOW = timedelta(minutes=15)
+
+# Fields carried per sensor in the user response. All of them come from the
+# one call the integration already makes, so reading more of them costs no
+# extra request.
+SENSOR_DETAIL_FIELDS = (
+    "batteryLevel",
+    "isOnline",
+    "connectionStrength",
+    "lastRecordReceivedAt",
+    "firmwareVersion",
+    "hardwareVersion",
+    "otaStatus",
+    "otaProgress",
+    "uploadInterval",
+)
+
+# The intervals the backend serves standby power for.
+STANDBY_INTERVALS = ("daily", "weekly", "monthly", "yearly")
+
+# Lookback window for standby requests. 35 days reliably covers the last
+# completed month, which is the longest period the monthly interval needs.
+STANDBY_DURATION = "P35D"
 
 TokenProvider: TypeAlias = Callable[[], Awaitable[str]]
 
@@ -63,36 +92,38 @@ class ObiEnergyTrackerAPI:
         token_provider: TokenProvider,
         bridge_id: str | None = None,
         device_id: str | None = None,
-        user_id: str | None = None,
+        country: str = "DE",
     ) -> None:
         """Initialize the API client."""
         self.session = session
-        self.token_provider = token_provider
+        self._token_provider = token_provider
         self.bridge_id = bridge_id
         self.device_id = device_id
-        self.user_id = user_id
+        self.country = country
         self.last_token: str | None = None
 
-    async def async_get_token(self) -> str:
-        """Obtain a valid access token from the token provider."""
-        self.last_token = await self.token_provider()
-        return self.last_token
+    async def async_get_token(self) -> str | None:
+        """Obtain a valid access token via the provider callback."""
+        try:
+            self.last_token = await self._token_provider()
+            return self.last_token
+        except Exception as err:
+            _LOGGER.error("Failed to retrieve access token: %s", err)
+            return None
 
     async def async_get_bridge_info(self) -> dict[str, Any] | None:
-        """Get bridge/device IDs and current device details from user profile."""
+        """Get bridge and device IDs, plus current device details."""
         try:
             token = await self.async_get_token()
             if not token:
-                _LOGGER.error("No access token available")
                 return None
 
-            user_id = self.user_id or extract_account_id(token)
-            if not user_id:
-                _LOGGER.error("No accountId found in token claims")
+            account_id = extract_account_id(token)
+            if not account_id:
+                _LOGGER.error("Could not extract account_id from token")
                 return None
-            self.user_id = user_id
 
-            url = f"{ENERGY_TRACKING_URL}/users/{user_id}"
+            url = f"{ENERGY_TRACKING_URL}/users/{account_id}"
             headers = {
                 "Accept": "application/vnd.obi.companion.energy-tracking.user.v1+json",
                 "Accept-Encoding": "gzip",
@@ -103,35 +134,29 @@ class ObiEnergyTrackerAPI:
 
             async with self.session.get(url, headers=headers) as response:
                 if response.status != 200:
-                    _LOGGER.error("Failed to get user info: %d", response.status)
+                    _LOGGER.error("Failed to get bridge info: %d", response.status)
                     return None
 
                 data = await response.json()
-                bridge = data.get("bridge")
-                if not bridge:
-                    _LOGGER.error("No bridge found in user info")
+                bridges = data.get("bridges", [])
+
+                if not bridges:
+                    _LOGGER.error("No bridges found in user data")
                     return None
 
+                bridge = bridges[0]
                 self.bridge_id = bridge.get("id")
+
                 sensors = bridge.get("sensors", [])
-                selected_sensor: dict[str, Any] | None = None
+                selected_sensor = None
 
                 if self.device_id:
                     selected_sensor = next(
-                        (
-                            sensor
-                            for sensor in sensors
-                            if isinstance(sensor, dict)
-                            and sensor.get("id") == self.device_id
-                        ),
-                        None,
+                        (s for s in sensors if s.get("id") == self.device_id), None
                     )
 
-                if selected_sensor is None and sensors:
-                    first_sensor = sensors[0]
-                    selected_sensor = (
-                        first_sensor if isinstance(first_sensor, dict) else None
-                    )
+                if not selected_sensor and sensors:
+                    selected_sensor = sensors[0]
 
                 if selected_sensor:
                     self.device_id = selected_sensor.get("id")
@@ -140,23 +165,14 @@ class ObiEnergyTrackerAPI:
                     _LOGGER.error("Could not find bridge_id or device_id")
                     return None
 
+                sensor = selected_sensor or {}
+
                 return {
                     "bridge_id": self.bridge_id,
                     "device_id": self.device_id,
-                    "firmwareVersion": bridge.get("firmwareVersion"),
-                    "hardwareVersion": bridge.get("hardwareVersion"),
-                    "batteryLevel": selected_sensor.get("batteryLevel")
-                    if selected_sensor
-                    else None,
-                    "isOnline": selected_sensor.get("isOnline")
-                    if selected_sensor
-                    else None,
-                    "connectionStrength": selected_sensor.get("connectionStrength")
-                    if selected_sensor
-                    else None,
-                    "lastRecordReceivedAt": selected_sensor.get("lastRecordReceivedAt")
-                    if selected_sensor
-                    else None,
+                    "bridge_firmware_version": bridge.get("firmwareVersion"),
+                    "bridge_hardware_version": bridge.get("hardwareVersion"),
+                    **{key: sensor.get(key) for key in SENSOR_DETAIL_FIELDS},
                 }
         except (OSError, ClientError) as err:
             _LOGGER.error("Error getting bridge info: %s", err)
@@ -168,14 +184,7 @@ class ObiEnergyTrackerAPI:
         if not bridge_info:
             return None
 
-        return {
-            "batteryLevel": bridge_info.get("batteryLevel"),
-            "isOnline": bridge_info.get("isOnline"),
-            "connectionStrength": bridge_info.get("connectionStrength"),
-            "lastRecordReceivedAt": bridge_info.get("lastRecordReceivedAt"),
-            "firmwareVersion": bridge_info.get("firmwareVersion"),
-            "hardwareVersion": bridge_info.get("hardwareVersion"),
-        }
+        return {key: bridge_info.get(key) for key in SENSOR_DETAIL_FIELDS}
 
     async def async_get_meter_data(
         self, window: timedelta | None = None
@@ -220,9 +229,91 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Error getting meter data: %s", err)
             return None
 
-    def _get_auth_headers(self, token: str) -> dict[str, str]:
+    async def async_get_consumption_forecast(self) -> dict[str, Any] | None:
+        """Get the weekly and monthly consumption forecast.
+
+        The response carries consumptionForecastWeekly and
+        consumptionForecastMonthly, both in watt-hours.
+        """
+        token = await self.async_get_token()
+        if not token or not self.bridge_id or not self.device_id:
+            return None
+
+        url = (
+            f"{ENERGY_TRACKING_URL}/analytics/"
+            f"{self.bridge_id}/{self.device_id}/forecast"
+        )
+        headers = self._get_auth_headers(token, accept=FORECAST_MEDIA_TYPE)
+
+        try:
+            async with self.session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    _LOGGER.debug(
+                        "Failed to get consumption forecast: %d", response.status
+                    )
+                    return None
+
+                data = await response.json()
+                if not isinstance(data, dict):
+                    _LOGGER.debug(
+                        "Unexpected forecast response type: %s", type(data).__name__
+                    )
+                    return None
+                return data
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error getting consumption forecast: %s", err)
+            return None
+
+    async def async_get_standby_power(
+        self, interval: str
+    ) -> list[dict[str, Any]] | None:
+        """Get average standby power records for one completed-period interval.
+
+        Despite the "standby consumption" wording the app uses, the API
+        returns a power value in watts, not an energy total.
+        """
+        token = await self.async_get_token()
+        if not token or not self.bridge_id or not self.device_id:
+            return None
+
+        url = (
+            f"{ENERGY_TRACKING_URL}/analytics/"
+            f"{self.bridge_id}/{self.device_id}/{interval}/standby"
+        )
+
+        # The window has to be sent as an ISO 8601 interval; the backend
+        # rejects a bare duration.
+        start = datetime.now(timezone.utc) - timedelta(days=35)
+        start_str = start.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        params = {"duration": f"{start_str}/{STANDBY_DURATION}"}
+        headers = self._get_auth_headers(token, accept=STANDBY_MEDIA_TYPE)
+
+        try:
+            async with self.session.get(
+                url, params=params, headers=headers
+            ) as response:
+                if response.status != 200:
+                    _LOGGER.debug(
+                        "Failed to get %s standby power: %d", interval, response.status
+                    )
+                    return None
+
+                data = await response.json()
+                if not isinstance(data, list):
+                    _LOGGER.debug(
+                        "Unexpected %s standby response type: %s",
+                        interval,
+                        type(data).__name__,
+                    )
+                    return None
+                return data
+        except (OSError, ClientError) as err:
+            _LOGGER.debug("Error getting %s standby power: %s", interval, err)
+            return None
+
+    def _get_auth_headers(self, token: str, accept: str | None = None) -> dict[str, str]:
         """Get headers with authorization token."""
-        accept_header = (
+        accept_header = accept or (
             "application/vnd.obi.companion.energy-tracking.historical-record.v1+json"
         )
         return {

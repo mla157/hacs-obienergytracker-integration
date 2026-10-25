@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
-from .api import ObiEnergyTrackerAPI
+from .api import STANDBY_INTERVALS, ObiEnergyTrackerAPI
 from .const import DOMAIN, LIVE_TIMEOUT
 from .live import ObiLiveMode
 
@@ -66,6 +66,7 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         - Device info & firmware info every ~30 min
         - Energy tariff / prices every ~1 hour
         - Updates long-term external statistics for the Energy Dashboard
+        - Consumption forecast and standby power, both best-effort
         """
         try:
             meter = await self.api.async_get_meter_data()
@@ -100,11 +101,22 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if meter:
                 await self._async_update_statistics(meter)
 
+            # Analytics are supplementary: the API client returns None on failure
+            # so that a missing forecast never takes the meter sensors down.
+            forecast = await self.api.async_get_consumption_forecast() or {}
+
+            standby = {
+                interval: await self.api.async_get_standby_power(interval)
+                for interval in STANDBY_INTERVALS
+            }
+
             return {
                 "meter": meter,
                 "device": device,
                 "firmware": self._firmware_data,
                 "prices": self._prices,
+                "forecast": forecast,
+                "standby": standby,
             }
         except OSError as err:
             _LOGGER.error("Failed to update data: %s", err)
@@ -263,139 +275,3 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.info("Historical statistics successfully imported into Energy dashboard")
         except Exception as err:
             _LOGGER.debug("Background history import completed with note: %s", err)
-
-    async def _async_update_statistics(self, meter_data: Any) -> None:
-        """Write external long-term statistics for the HA Energy dashboard."""
-        device_id = self.api.device_id or "sensor"
-        slug_dev = slugify(device_id)
-
-        records = meter_data if isinstance(meter_data, list) else [meter_data]
-        records = [r for r in records if isinstance(r, dict)]
-        if not records:
-            return
-
-        energy_records = [r for r in records if r.get("measure") == "energy" or "energy" in r or "value" in r]
-        feed_in_records = [r for r in records if r.get("measure") == "negative_energy"]
-
-        if not energy_records:
-            return
-
-        # Consumption statistics
-        consumption_stats: list[StatisticData] = []
-        cost_stats: list[StatisticData] = []
-        kwh_price = self._prices.get("consumption")
-
-        for record in energy_records:
-            val = record.get("value") if "value" in record else record.get("energy")
-            time_str = record.get("time") or record.get("recordedAt")
-            if val is None or not time_str:
-                continue
-
-            try:
-                dt_record = dt_util.parse_datetime(str(time_str))
-                if not dt_record:
-                    continue
-                start = dt_record.replace(minute=0, second=0, microsecond=0)
-                energy_val = float(val)
-
-                consumption_stats.append(
-                    StatisticData(
-                        start=start,
-                        state=energy_val,
-                        sum=energy_val,
-                    )
-                )
-
-                if kwh_price is not None:
-                    # Cost in EUR: (Wh / 1000) * EUR/kWh
-                    cost_val = (energy_val / 1000.0) * kwh_price
-                    cost_stats.append(
-                        StatisticData(
-                            start=start,
-                            state=cost_val,
-                            sum=cost_val,
-                        )
-                    )
-            except (ValueError, TypeError):
-                continue
-
-        if consumption_stats:
-            meta_consumption = StatisticMetaData(
-                has_mean=False,
-                has_sum=True,
-                name="OBI Energy Consumption",
-                source=DOMAIN,
-                statistic_id=f"{DOMAIN}:{slug_dev}_consumption",
-                unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-            )
-            async_add_external_statistics(self.hass, meta_consumption, consumption_stats)
-
-            if cost_stats:
-                meta_cost = StatisticMetaData(
-                    has_mean=False,
-                    has_sum=True,
-                    name="OBI Energy Consumption Cost",
-                    source=DOMAIN,
-                    statistic_id=f"{DOMAIN}:{slug_dev}_consumption_cost",
-                    unit_of_measurement="EUR",
-                )
-                async_add_external_statistics(self.hass, meta_cost, cost_stats)
-
-        # Feed-in statistics
-        feed_in_stats: list[StatisticData] = []
-        if feed_in_records:
-            for record in feed_in_records:
-                val = record.get("value")
-                time_str = record.get("time") or record.get("recordedAt")
-                if val is None or not time_str:
-                    continue
-                try:
-                    dt_record = dt_util.parse_datetime(str(time_str))
-                    if not dt_record:
-                        continue
-                    start = dt_record.replace(minute=0, second=0, microsecond=0)
-                    feed_val = float(val)
-                    self._feed_in_last = feed_val
-                    feed_in_stats.append(
-                        StatisticData(
-                            start=start,
-                            state=feed_val,
-                            sum=feed_val,
-                        )
-                    )
-                except (ValueError, TypeError):
-                    continue
-        else:
-            # Zero-fill feed-in for non-PV accounts at the consumption timestamps
-            # so HA Energy dashboard selector is always populated and never empty.
-            for c_stat in consumption_stats:
-                feed_in_stats.append(
-                    StatisticData(
-                        start=c_stat["start"],
-                        state=self._feed_in_last,
-                        sum=self._feed_in_last,
-                    )
-                )
-
-        if feed_in_stats:
-            meta_feed_in = StatisticMetaData(
-                has_mean=False,
-                has_sum=True,
-                name="OBI Energy Feed-in",
-                source=DOMAIN,
-                statistic_id=f"{DOMAIN}:{slug_dev}_feed_in",
-                unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-            )
-            async_add_external_statistics(self.hass, meta_feed_in, feed_in_stats)
-
-    async def async_import_history(self) -> None:
-        """Import long-term meter history in the background on startup."""
-        _LOGGER.debug("Starting background historical statistics import...")
-        try:
-            history = await self.api.async_get_meter_data(window=timedelta(days=30))
-            if history:
-                await self._async_update_statistics(history)
-                _LOGGER.info("Historical statistics successfully imported into Energy dashboard")
-        except Exception as err:
-            _LOGGER.debug("Background history import completed with note: %s", err)
-

@@ -11,6 +11,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -41,6 +42,17 @@ async def async_setup_entry(
         ObiIsOnlineSensor(coordinator),
         ObiConnectionStrengthSensor(coordinator),
         ObiLastRecordReceivedAtSensor(coordinator),
+        ObiFirmwareVersionSensor(coordinator),
+        ObiHardwareVersionSensor(coordinator),
+        ObiOtaStatusSensor(coordinator),
+        ObiOtaProgressSensor(coordinator),
+        ObiUploadIntervalSensor(coordinator),
+        ObiForecastWeeklySensor(coordinator),
+        ObiForecastMonthlySensor(coordinator),
+        ObiStandbyDailySensor(coordinator),
+        ObiStandbyWeeklySensor(coordinator),
+        ObiStandbyMonthlySensor(coordinator),
+        ObiStandbyYearlySensor(coordinator),
     ]
 
     async_add_entities(sensors)
@@ -225,6 +237,174 @@ class ObiLastRecordReceivedAtSensor(ObiDeviceValueSensorBase):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
+
+
+class ObiFirmwareVersionSensor(ObiDeviceValueSensorBase):
+    """Sensor for the firmware version of the sensor puck."""
+
+    _attr_unique_id = "obi_firmware_version"
+    _attr_translation_key = "firmware_version"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _device_key = "firmwareVersion"
+
+
+class ObiHardwareVersionSensor(ObiDeviceValueSensorBase):
+    """Sensor for the hardware version of the sensor puck."""
+
+    _attr_unique_id = "obi_hardware_version"
+    _attr_translation_key = "hardware_version"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _device_key = "hardwareVersion"
+
+
+class ObiOtaStatusSensor(ObiDeviceValueSensorBase):
+    """Sensor for the over-the-air update status, e.g. NOT_UPDATING."""
+
+    _attr_unique_id = "obi_ota_status"
+    _attr_translation_key = "ota_status"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:cloud-download-outline"
+    _device_key = "otaStatus"
+
+
+class ObiOtaProgressSensor(ObiDeviceValueSensorBase):
+    """Sensor for over-the-air update progress.
+
+    The API reports null outside of an update, so this stays unknown until
+    one is actually running.
+    """
+
+    _attr_unique_id = "obi_ota_progress"
+    _attr_translation_key = "ota_progress"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_icon = "mdi:cloud-download-outline"
+    _device_key = "otaProgress"
+
+
+class ObiUploadIntervalSensor(ObiDeviceValueSensorBase):
+    """Sensor for how often the puck currently reports to the backend.
+
+    Worth surfacing because live mode works by changing this value: it shows
+    whether the sensor really went to its two-second interval, and whether it
+    was put back to 300 afterwards.
+    """
+
+    _attr_unique_id = "obi_upload_interval"
+    _attr_translation_key = "upload_interval"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_icon = "mdi:timer-outline"
+    _device_key = "uploadInterval"
+
+
+class ObiForecastSensorBase(ObiEnergySensorBase):
+    """Base sensor for the consumption forecast.
+
+    The forecast is revised downwards as well as upwards, so the state class
+    is TOTAL rather than TOTAL_INCREASING: Home Assistant reads a drop under
+    TOTAL_INCREASING as a meter reset. MEASUREMENT is not an option either,
+    because it is rejected for device class ENERGY.
+    """
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_native_unit_of_measurement = "Wh"
+    _forecast_key: str
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the forecast value in Wh."""
+        if not self.coordinator.data:
+            return None
+
+        forecast = self.coordinator.data.get("forecast")
+        if not isinstance(forecast, dict):
+            return None
+
+        return forecast.get(self._forecast_key)
+
+
+class ObiForecastWeeklySensor(ObiForecastSensorBase):
+    """Sensor for the weekly consumption forecast."""
+
+    _attr_unique_id = "obi_forecast_weekly"
+    _attr_translation_key = "forecast_weekly"
+    _forecast_key = "consumptionForecastWeekly"
+
+
+class ObiForecastMonthlySensor(ObiForecastSensorBase):
+    """Sensor for the monthly consumption forecast."""
+
+    _attr_unique_id = "obi_forecast_monthly"
+    _attr_translation_key = "forecast_monthly"
+    _forecast_key = "consumptionForecastMonthly"
+
+
+class ObiStandbySensorBase(ObiEnergySensorBase):
+    """Base sensor for average standby power over a completed period.
+
+    The API reports this in watts even though the app calls it standby
+    consumption, so it is a power sensor, not an energy one.
+    """
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "W"
+    _interval: str
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the most recent standby power value for this interval."""
+        if not self.coordinator.data:
+            return None
+
+        standby = self.coordinator.data.get("standby")
+        if not isinstance(standby, dict):
+            return None
+
+        records = standby.get(self._interval)
+        if not records:
+            return None
+
+        # Records are not guaranteed to be ordered, so pick by timestamp
+        # rather than trusting the last element.
+        latest = max(records, key=lambda record: record.get("time", ""))
+        return latest.get("value")
+
+
+class ObiStandbyDailySensor(ObiStandbySensorBase):
+    """Sensor for average standby power over the last completed day."""
+
+    _attr_unique_id = "obi_standby_daily"
+    _attr_translation_key = "standby_daily"
+    _interval = "daily"
+
+
+class ObiStandbyWeeklySensor(ObiStandbySensorBase):
+    """Sensor for average standby power over the last completed week."""
+
+    _attr_unique_id = "obi_standby_weekly"
+    _attr_translation_key = "standby_weekly"
+    _interval = "weekly"
+
+
+class ObiStandbyMonthlySensor(ObiStandbySensorBase):
+    """Sensor for average standby power over the last completed month."""
+
+    _attr_unique_id = "obi_standby_monthly"
+    _attr_translation_key = "standby_monthly"
+    _interval = "monthly"
+
+
+class ObiStandbyYearlySensor(ObiStandbySensorBase):
+    """Sensor for average standby power over the last completed year."""
+
+    _attr_unique_id = "obi_standby_yearly"
+    _attr_translation_key = "standby_yearly"
+    _interval = "yearly"
 
 
 class ObiLivePowerSensor(SensorEntity):
