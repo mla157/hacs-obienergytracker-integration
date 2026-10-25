@@ -1,0 +1,65 @@
+{
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "OBI Energy Tracker"
+      },
+      "reauth_confirm": {
+        "title": "OBI Energy Tracker erneut authentifizieren",
+        "description": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut über OBI an, um fortzufahren."
+      }
+    },
+    "abort": {
+      "already_configured": "Dieses OBI-Konto ist in Home Assistant bereits eingerichtet",
+      "cannot_connect": "Verbindung zum OBI Energy Tracker Dienst fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung.",
+      "oauth_error": "Ungültige Token-Daten von der OBI-Authentifizierung empfangen.",
+      "wrong_account": "Bitte melden Sie sich mit demselben OBI-Konto an, mit dem die Integration eingerichtet wurde.",
+      "reauth_successful": "Erneute Authentifizierung war erfolgreich"
+    },
+    "create_entry": {
+      "default": "Erfolgreich mit OBI Energy Tracker verbunden"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Von OBI Energy Tracker abmelden",
+        "description": "Beendet die OBI-Sitzung und widerruft die gespeicherten Token. Anschließend werden Sie aufgefordert, sich erneut anzumelden. Geräte, Entitäten und Historie bleiben erhalten."
+      }
+    },
+    "abort": {
+      "logged_out": "Abgemeldet. Nutzen Sie die Benachrichtigung, um sich erneut anzumelden."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meter_reading": {
+        "name": "Zählerstand Netzbezug"
+      },
+      "feed_in_meter_reading": {
+        "name": "Zählerstand Netzeinspeisung"
+      },
+      "live_power": {
+        "name": "Aktuelle Leistung (Live)"
+      },
+      "battery_level": {
+        "name": "Batteriestand"
+      },
+      "is_online": {
+        "name": "Online-Status"
+      },
+      "connection_strength": {
+        "name": "Verbindungsstärke"
+      },
+      "last_record_received_at": {
+        "name": "Letzter Datensatz empfangen um"
+      }
+    },
+    "switch": {
+      "live_mode": {
+        "name": "Live-Modus"
+      }
+    }
+  }
+}
+

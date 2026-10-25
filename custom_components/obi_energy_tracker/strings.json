@@ -1,31 +1,34 @@
 {
   "config": {
     "step": {
-      "user": {
-        "title": "Connect to Obi EnergyTracker",
-        "description": "Enter your Obi account credentials",
-        "data": {
-          "email": "Email address",
-          "password": "Password",
-          "country": "Country code"
-        },
-        "data_description": {
-          "email": "Your Obi account email",
-          "password": "Your Obi account password",
-          "country": "The country where your account is registered (e.g., DE)"
-        }
+      "pick_implementation": {
+        "title": "OBI Energy Tracker"
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate OBI Energy Tracker",
+        "description": "Your session has expired or requires renewal. Please sign in via OBI to continue."
       }
     },
-    "error": {
-      "invalid_auth": "Invalid email or password",
-      "connection_error": "Failed to connect to Obi EnergyTracker service",
-      "no_devices": "No Obi EnergyTracker devices found in your account"
-    },
     "abort": {
-      "already_configured": "Account is already configured"
+      "already_configured": "This OBI account is already configured in Home Assistant",
+      "cannot_connect": "Could not connect to the OBI Energy Tracker service. Please check your internet connection.",
+      "oauth_error": "Received invalid authentication token from OBI.",
+      "wrong_account": "Please log in with the same OBI account this integration was set up with.",
+      "reauth_successful": "Re-authentication was successful"
     },
     "create_entry": {
-      "default": "Successfully connected to Obi EnergyTracker"
+      "default": "Successfully connected to OBI Energy Tracker"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Log out of OBI Energy Tracker",
+        "description": "Ends the OBI session and revokes the stored tokens. You will then be asked to log in again. Devices, entities and history are kept."
+      }
+    },
+    "abort": {
+      "logged_out": "Logged out. Use the notification to log in again and keep using the integration."
     }
   },
   "entity": {
@@ -39,18 +42,18 @@
       "live_power": {
         "name": "Aktuelle Leistung (Live)"
       },
-       "battery_level": {
-         "name": "Batteriestand"
-       },
-       "is_online": {
-         "name": "Online-Status"
-       },
-       "connection_strength": {
-         "name": "Verbindungsstärke"
-       },
-       "last_record_received_at": {
-         "name": "Letzter Datensatz empfangen um"
-       }
+      "battery_level": {
+        "name": "Batteriestand"
+      },
+      "is_online": {
+        "name": "Online-Status"
+      },
+      "connection_strength": {
+        "name": "Verbindungsstärke"
+      },
+      "last_record_received_at": {
+        "name": "Letzter Datensatz empfangen um"
+      }
     },
     "switch": {
       "live_mode": {
@@ -59,4 +62,3 @@
     }
   }
 }
-

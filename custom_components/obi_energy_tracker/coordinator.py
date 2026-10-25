@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
 from typing import Any
 
@@ -16,7 +16,11 @@ from .live import ObiLiveMode
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(minutes=5)
-DAYS_OF_HISTORY = 7
+
+# Device info (battery, online status, etc.) rarely changes and does not need
+# to be fetched every poll cycle.  Re-fetch it only every 30 minutes to reduce
+# the number of API calls from 3-per-cycle to ~1.
+DEVICE_INFO_INTERVAL = timedelta(minutes=30)
 
 
 class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -38,43 +42,52 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.api = api
         self.live = ObiLiveMode(hass, api, LIVE_TIMEOUT)
+        self._cached_device: dict[str, Any] | None = None
+        self._device_polls_remaining: int = 0
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API.
 
         Retrieves:
-        - Meter reading (Zählerstand) for the device
-        - Hourly energy data for the past 7 days
+        - Meter reading (Zählerstand) every poll cycle (5 min)
+        - Device info (battery, online, RSSI) every ~30 min
         """
         try:
             meter = await self.api.async_get_meter_data()
             _LOGGER.debug("Meter data: %s", meter)
 
-            device = await self.api.async_get_device_info()
-            _LOGGER.debug("Device data: %s", device)
-
-            # Fetch hourly data for past days (default 7 days)
-            end_date = datetime.now()
-            hourly_data = await self.api.async_get_hourly_data(
-                start_date=end_date,
-                num_days=DAYS_OF_HISTORY,
-            )
-            _LOGGER.debug(
-                "Hourly data fetched: %s", "available" if hourly_data else "none"
-            )
+            # Re-fetch device info only when the cache has expired.
+            if self._device_polls_remaining <= 0:
+                new_device = await self.api.async_get_device_info()
+                if new_device is not None:
+                    self._cached_device = new_device
+                    self._device_polls_remaining = int(
+                        DEVICE_INFO_INTERVAL / SCAN_INTERVAL
+                    )
+                    _LOGGER.debug("Device data refreshed: %s", new_device)
+                else:
+                    _LOGGER.warning(
+                        "Could not refresh device info; retaining cached data"
+                    )
+                device = self._cached_device
+            else:
+                device = self._cached_device
+                self._device_polls_remaining -= 1
+                _LOGGER.debug(
+                    "Device data cached (next refresh in %d polls)",
+                    self._device_polls_remaining,
+                )
 
             _LOGGER.info(
-                "Successfully fetched data: meter=%s, device=%s, hourly_days=%d",
+                "Successfully fetched data: meter=%s, device=%s",
                 "available" if meter else "none",
                 "available" if device else "none",
-                DAYS_OF_HISTORY,
             )
         except OSError as err:
             _LOGGER.error("Failed to update data: %s", err)
             raise UpdateFailed(f"Failed to update data: {err}") from err
 
         return {
-            "hourly": hourly_data,
             "meter": meter,
             "device": device,
         }

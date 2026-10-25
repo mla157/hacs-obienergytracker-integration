@@ -81,8 +81,8 @@ rules:
     status: done
     comment: DataUpdateCoordinator manages parallel update coordination.
   reauthentication-flow:
-    status: exempt
-    comment: Can be added as future enhancement.
+    status: done
+    comment: Implemented OAuth2 reauth flow with Keycloak session revocation.
   test-coverage:
     status: exempt
     comment: Test coverage can be added with pytest fixtures.
