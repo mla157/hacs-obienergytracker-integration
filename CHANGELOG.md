@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.5.1...obi_energy_tracker-0.6.0) (2026-10-30)
+
+
+### Features
+
+* **api:** Add JSON import for enhanced data handling ([fccb941](https://github.com/mla157/hacs-obienergytracker-integration/commit/fccb941f173201274d87b716cd3d047a931597cb))
+
 ## [0.5.1](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.5.0...obi_energy_tracker-0.5.1) (2026-10-30)
 
 
