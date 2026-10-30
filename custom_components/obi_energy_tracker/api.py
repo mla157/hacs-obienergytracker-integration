@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
-import json
 import logging
 from typing import Any, TypeAlias
 
@@ -107,7 +106,7 @@ class ObiEnergyTrackerAPI:
         try:
             self.last_token = await self._token_provider()
             return self.last_token
-        except Exception as err:
+        except (OSError, ClientError) as err:
             _LOGGER.error("Failed to retrieve access token: %s", err)
             return None
 
@@ -340,13 +339,10 @@ class ObiEnergyTrackerAPI:
                 return None
 
             url = f"{ENERGY_TRACKING_URL}/energy-consumers/{target_id}"
-            headers = {
-                "Accept": "application/vnd.obi.companion.energy-tracking.energy-consumer.v1+json",
-                "Accept-Encoding": "gzip",
-                "User-Agent": HA_USER_AGENT,
-                "Authorization": f"Bearer {token}",
-                "Connection": "Keep-Alive",
-            }
+            headers = self._get_auth_headers(
+                token,
+                accept="application/vnd.obi.companion.energy-tracking.energy-consumer.v1+json",
+            )
 
             async with self.session.get(url, headers=headers) as response:
                 if response.status == 200:
@@ -370,13 +366,10 @@ class ObiEnergyTrackerAPI:
                 return None
 
             url = f"{ENERGY_TRACKING_URL}/bridges/{target_bridge}/firmware-update"
-            headers = {
-                "Accept": "application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
-                "Accept-Encoding": "gzip",
-                "User-Agent": HA_USER_AGENT,
-                "Authorization": f"Bearer {token}",
-                "Connection": "Keep-Alive",
-            }
+            headers = self._get_auth_headers(
+                token,
+                accept="application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
+            )
 
             async with self.session.get(url, headers=headers) as response:
                 if response.status == 200:
@@ -400,13 +393,10 @@ class ObiEnergyTrackerAPI:
                 return False
 
             url = f"{ENERGY_TRACKING_URL}/bridges/{target_bridge}/firmware-update/{firmware_id}"
-            headers = {
-                "Accept": "application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
-                "Accept-Encoding": "gzip",
-                "User-Agent": HA_USER_AGENT,
-                "Authorization": f"Bearer {token}",
-                "Connection": "Keep-Alive",
-            }
+            headers = self._get_auth_headers(
+                token,
+                accept="application/vnd.obi.companion.energy-tracking.firmware-update.v1+json",
+            )
 
             async with self.session.post(url, headers=headers) as response:
                 return response.status in (200, 202, 204)
@@ -426,18 +416,13 @@ class ObiEnergyTrackerAPI:
                 return False
 
             url = f"{LIVE_API_BASE}/sensors/{self.device_id}"
-            payload = json.dumps({"id": self.device_id, "uploadInterval": interval})
-            headers = {
-                "Accept": SENSOR_MEDIA_TYPE,
-                "Content-Type": SENSOR_MEDIA_TYPE,
-                "Accept-Encoding": "gzip",
-                "User-Agent": HA_USER_AGENT,
-                "Authorization": f"Bearer {token}",
-                "Connection": "Keep-Alive",
-            }
+            headers = self._get_auth_headers(token, accept=SENSOR_MEDIA_TYPE)
+            headers["Content-Type"] = SENSOR_MEDIA_TYPE
 
             async with self.session.patch(
-                url, data=payload, headers=headers
+                url,
+                json={"id": self.device_id, "uploadInterval": interval},
+                headers=headers,
             ) as response:
                 if response.status >= 300:
                     _LOGGER.error(
@@ -452,7 +437,7 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Error setting upload interval: %s", err)
             return False
 
-    def live_ws_connect(self, token: str | None = None) -> Any:
+    def live_ws_connect(self, token: str | None = None) -> "aiohttp.client.ClientWebSocketResponse":
         """Return the websocket connection for live readings.
 
         Must be wss: the backend answers plain ws on port 80 with HTTP 400.

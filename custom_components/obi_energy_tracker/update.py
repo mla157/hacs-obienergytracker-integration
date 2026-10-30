@@ -61,9 +61,15 @@ class ObiBridgeUpdateEntity(CoordinatorEntity[ObiEnergyTrackerCoordinator], Upda
         """Return currently installed bridge firmware version."""
         if not self.coordinator.data:
             return None
+        # Bridge firmware comes from the dedicated firmware-update endpoint,
+        # not from the sensor-puck device data which carries the puck's own version.
+        firmware = self.coordinator.data.get("firmware")
+        if isinstance(firmware, dict):
+            return firmware.get("currentVersion") or firmware.get("installedVersion")
+        # Fall back to bridge_firmware_version stored in device data at discovery time.
         device = self.coordinator.data.get("device")
         if isinstance(device, dict):
-            return device.get("firmwareVersion")
+            return device.get("bridge_firmware_version")
         return None
 
     @property
@@ -100,7 +106,11 @@ class ObiBridgeUpdateEntity(CoordinatorEntity[ObiEnergyTrackerCoordinator], Upda
 
         firmware_id = str(firmware["id"])
         _LOGGER.info("Starting firmware update to version %s (id: %s)", version, firmware_id)
-        success = await self.coordinator.api.async_trigger_bridge_firmware_update(firmware_id)
+        try:
+            success = await self.coordinator.api.async_trigger_bridge_firmware_update(firmware_id)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.error("Unexpected error triggering firmware update: %s", err)
+            return
         if success:
             await self.coordinator.async_request_refresh()
         else:
