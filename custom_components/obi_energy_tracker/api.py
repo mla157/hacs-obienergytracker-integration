@@ -139,6 +139,8 @@ class ObiEnergyTrackerAPI:
 
                 data = await response.json()
                 bridges = data.get("bridges", [])
+                if not bridges and isinstance(data.get("bridge"), dict):
+                    bridges = [data["bridge"]]
 
                 if not bridges:
                     _LOGGER.error("No bridges found in user data")
