@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.3.0...obi_energy_tracker-0.4.0) (2026-10-30)
+
+
+### Features
+
+* Improve API bridge detection and configuration flow ([4f7af45](https://github.com/mla157/hacs-obienergytracker-integration/commit/4f7af45d27fe15c77e095de177ef09e7d8d552fe))
+
 ## [0.6.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.5.0...obi_energy_tracker-0.6.0) (2026-10-30)
 
 
