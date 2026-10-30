@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -60,6 +62,9 @@ class ObiIsOnlineBinarySensor(CoordinatorEntity[ObiEnergyTrackerCoordinator], Bi
             return None
         device = self.coordinator.data.get("device")
         if isinstance(device, dict):
-            return device.get("isOnline")
+            value = device.get("isOnline")
+            if value is None:
+                return None
+            return bool(value)
         return None
 

@@ -11,12 +11,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ObiEnergyTrackerAPI
 from .const import CONF_BRIDGE_ID, CONF_DEVICE_ID, DOMAIN
 from .coordinator import ObiEnergyTrackerCoordinator
 from .oauth2 import KeycloakOAuth2Implementation, oauth_token_provider
+from .session import async_create_obi_session
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,8 +34,6 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ObiEnergyTrackerConfigEntry
 ) -> bool:
     """Set up obienergytracker from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-
     # Register OAuth2 implementation
     config_entry_oauth2_flow.async_register_implementation(
         hass, DOMAIN, KeycloakOAuth2Implementation(hass)
@@ -55,8 +53,10 @@ async def async_setup_entry(
     )
     oauth_session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
 
-    # Standard HA shared ClientSession works cleanly with OAuth2 endpoints
-    session = async_get_clientsession(hass)
+    # Use a dedicated session without ALPN to avoid OBI CDN blocking HTTP/1.1 handshakes.
+    # The session is owned by this config entry and closed on unload.
+    session = async_create_obi_session(hass)
+    entry.async_on_unload(session.close)
     token_provider = oauth_token_provider(oauth_session)
 
     api = ObiEnergyTrackerAPI(
@@ -107,7 +107,4 @@ async def async_unload_entry(
     if hasattr(entry, "runtime_data") and entry.runtime_data:
         await entry.runtime_data.live.async_turn_off()
 
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

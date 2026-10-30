@@ -76,9 +76,7 @@ class ObiLiveModeSwitch(SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Switch live mode on."""
         await self._live.async_turn_on()
-        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Switch live mode off."""
         await self._live.async_turn_off()
-        self.async_write_ha_state()

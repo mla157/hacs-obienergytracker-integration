@@ -15,11 +15,11 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ObiEnergyTrackerAPI, extract_account_id, extract_jwt_claims
 from .const import CONF_BRIDGE_ID, CONF_DEVICE_ID, DOMAIN, OAUTH2_SCOPES
 from .oauth2 import KeycloakOAuth2Implementation, async_revoke_session
+from .session import async_create_obi_session
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,18 +71,22 @@ class ObiEnergyTrackerConfigFlow(
 
         account_id = extract_account_id(access_token)
 
-        # Test the connection and discover bridge/device IDs
-        session = async_get_clientsession(self.hass)
+        # Test the connection and discover bridge/device IDs.
+        # Use the custom session to avoid the OBI CDN ALPN issue.
+        session = async_create_obi_session(self.hass)
 
         async def _static_token() -> str:
             return access_token
 
-        api = ObiEnergyTrackerAPI(
-            session=session,
-            token_provider=_static_token,
-        )
+        try:
+            api = ObiEnergyTrackerAPI(
+                session=session,
+                token_provider=_static_token,
+            )
 
-        info = await api.async_get_bridge_info()
+            info = await api.async_get_bridge_info()
+        finally:
+            await session.close()
         if not info:
             return self.async_abort(reason="cannot_connect")
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 import logging
-from math import isclose
 from typing import Any
 
 from homeassistant.components.recorder.models import (
@@ -13,7 +13,6 @@ from homeassistant.components.recorder.models import (
 )
 from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
-    get_last_statistics,
 )
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
@@ -105,10 +104,10 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # so that a missing forecast never takes the meter sensors down.
             forecast = await self.api.async_get_consumption_forecast() or {}
 
-            standby = {
-                interval: await self.api.async_get_standby_power(interval)
-                for interval in STANDBY_INTERVALS
-            }
+            standby_results = await asyncio.gather(
+                *[self.api.async_get_standby_power(interval) for interval in STANDBY_INTERVALS]
+            )
+            standby = dict(zip(STANDBY_INTERVALS, standby_results))
 
             return {
                 "meter": meter,
@@ -118,7 +117,7 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "forecast": forecast,
                 "standby": standby,
             }
-        except OSError as err:
+        except Exception as err:
             _LOGGER.error("Failed to update data: %s", err)
             raise UpdateFailed(f"Failed to update data: {err}") from err
 
