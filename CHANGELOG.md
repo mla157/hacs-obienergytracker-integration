@@ -1,14 +1,6 @@
 # Changelog
 
-## [0.3.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.2.0...obi_energy_tracker-0.3.0) (2026-10-25)
-
-
-### Features
-
-* Enhance OBI Energy Tracker integration with new binary sensor and update platform ([48e44f7](https://github.com/mla157/hacs-obienergytracker-integration/commit/48e44f794ca78e32a468647eb5c5103284e0dbe4))
-* **sensor:** Add consumption forecast, standby power and puck diagnostic sensors ([#40](https://github.com/mla157/hacs-obienergytracker-integration/issues/40)) ([55edcc6](https://github.com/mla157/hacs-obienergytracker-integration/commit/55edcc642e80c6c7f262be7bb74f2f16293bf4f7))
-
-## [0.2.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.1.0...obi_energy_tracker-0.2.0) (2026-10-25)
+## [0.6.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.5.0...obi_energy_tracker-0.6.0) (2026-10-30)
 
 
 ### Features
@@ -22,6 +14,7 @@
 * **api:** enhance device info retrieval and update bridge info method ([e181256](https://github.com/mla157/hacs-obienergytracker-integration/commit/e181256110add2df5218595d7ed37cbdccc21ff2))
 * Enhance OBI Energy Tracker integration with new binary sensor and update platform ([48e44f7](https://github.com/mla157/hacs-obienergytracker-integration/commit/48e44f794ca78e32a468647eb5c5103284e0dbe4))
 * Implement OAuth2 authentication for Obi Energy Tracker integration ([d4fb0cd](https://github.com/mla157/hacs-obienergytracker-integration/commit/d4fb0cdfe4ae413b9b982cca4f561933721aa720))
+* Improve API bridge detection and configuration flow ([4f7af45](https://github.com/mla157/hacs-obienergytracker-integration/commit/4f7af45d27fe15c77e095de177ef09e7d8d552fe))
 * **sensor:** add consumption forecast and standby power sensors ([7816cc8](https://github.com/mla157/hacs-obienergytracker-integration/commit/7816cc88992bf1b4ee578ee48a408ed23d2639ff))
 * **sensor:** Add consumption forecast, standby power and puck diagnostic sensors ([#40](https://github.com/mla157/hacs-obienergytracker-integration/issues/40)) ([55edcc6](https://github.com/mla157/hacs-obienergytracker-integration/commit/55edcc642e80c6c7f262be7bb74f2f16293bf4f7))
 * **sensor:** add feed-in meter reading sensor (Zählerstand Netzeinspeisung) ([8b8699c](https://github.com/mla157/hacs-obienergytracker-integration/commit/8b8699c5ec304469e1b4520514a76bdb525ca9bc))

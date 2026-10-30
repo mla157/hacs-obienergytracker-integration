@@ -80,7 +80,6 @@ class ObiEnergyTrackerConfigFlow(
         api = ObiEnergyTrackerAPI(
             session=session,
             token_provider=_static_token,
-            user_id=account_id,
         )
 
         info = await api.async_get_bridge_info()
