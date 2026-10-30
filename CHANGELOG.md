@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.5.0...obi_energy_tracker-0.5.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* resolve OAuth2 re-auth failures and apply integration-wide improvements ([0e6e5c5](https://github.com/mla157/hacs-obienergytracker-integration/commit/0e6e5c56d8001c3e93ebd818719be1d7c65ddb1b))
+
 ## [0.5.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-0.4.0...obi_energy_tracker-0.5.0) (2026-10-30)
 
 
