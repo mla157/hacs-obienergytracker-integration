@@ -4,7 +4,13 @@ This integration allows you to monitor your **OBI Energy Tracker** device direct
 
 ## Installation
 
-Add this repository via custom repository in HACS: https://www.hacs.xyz/docs/faq/custom_repositories/
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mla157&repository=hacs-obienergytracker-integration&category=integration)
+
+Or add it manually via a custom repository in HACS: https://www.hacs.xyz/docs/faq/custom_repositories/
+
+Once installed, restart Home Assistant and then add the integration:
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=obi_energy_tracker)
 
 ## OBI Energy Tracker
 
