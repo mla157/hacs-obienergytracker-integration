@@ -221,7 +221,21 @@ class ObiLiveMode:
                     aiohttp.WSMsgType.CLOSING,
                     aiohttp.WSMsgType.ERROR,
                 ):
-                    _LOGGER.debug("Live websocket closed: %s", message.type.name)
+                    close_code = getattr(websocket, "close_code", None)
+                    close_extra = message.extra if message.extra else ""
+                    # A server-initiated close right after opening (e.g.
+                    # 1008 "Missing Origin header") is a connection failure
+                    # rather than a clean end-of-stream, so log it at WARNING
+                    # and let the caller count it as a failure by raising.
+                    if close_code and close_code not in (1000, 1001):
+                        raise aiohttp.ClientError(
+                            f"Server closed websocket: {close_code} {close_extra}"
+                        )
+                    _LOGGER.debug(
+                        "Live websocket closed: %s (code=%s)",
+                        message.type.name,
+                        close_code,
+                    )
                     return
 
     @callback

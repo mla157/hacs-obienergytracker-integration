@@ -442,6 +442,8 @@ class ObiEnergyTrackerAPI:
         """Return the websocket connection for live readings.
 
         Must be wss: the backend answers plain ws on port 80 with HTTP 400.
+        The gateway also requires an Origin header; without it the server
+        closes the socket immediately with 1008 "Missing Origin header".
         """
         auth_token = token or self.last_token or ""
         return self.session.ws_connect(
@@ -452,6 +454,7 @@ class ObiEnergyTrackerAPI:
             },
             headers={
                 "Authorization": f"Bearer {auth_token}",
+                "Origin": "https://api.obi.com",
                 "User-Agent": HA_USER_AGENT,
             },
             heartbeat=30,

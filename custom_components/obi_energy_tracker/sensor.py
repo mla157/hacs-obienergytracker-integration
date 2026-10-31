@@ -112,14 +112,16 @@ class ObiEnergySensorBase(CoordinatorEntity[ObiEnergyTrackerCoordinator], Sensor
 class ObiMeterSensorBase(ObiEnergySensorBase):
     """Base sensor for cumulative meter readings (Zählerstand).
 
-    Note: Long-term statistics for the HA Energy dashboard are written directly
-    as external statistics by the coordinator. Leaving state_class as None ensures
-    the recorder does not compile competing entity statistics that cause baseline drift
-    or negative spikes in the Energy dashboard.
+    state_class is set to TOTAL_INCREASING so that Home Assistant's recorder
+    keeps entity-level statistics and the sensor remains usable as a grid
+    source in the Energy dashboard.  The coordinator also writes external
+    statistics (obi_energy_tracker:<device_id>_consumption) for richer
+    cost tracking; both can coexist without interfering.
     """
 
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = "Wh"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _measure: str
 
     def __init__(self, coordinator: ObiEnergyTrackerCoordinator) -> None:

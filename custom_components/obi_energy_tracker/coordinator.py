@@ -123,19 +123,24 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_refresh_prices(self) -> None:
         """Fetch electricity prices and feed-in compensation from OBI account."""
-        consumer = await self.api.async_get_energy_consumer()
+        response = await self.api.async_get_energy_consumer()
         self._last_price_refresh = dt_util.utcnow()
-        if consumer and isinstance(consumer, dict):
+        if response and isinstance(response, dict):
+            # The API wraps the tariff object in an "energyConsumer" key:
+            # {"energyConsumer": {"kwhPrice": "31.80", "feedInCompensation": "8.00", ...}}
+            consumer = response.get("energyConsumer") or response
             kwh_price = consumer.get("kwhPrice") or consumer.get("kwh_price")
             feed_in = consumer.get("feedInCompensation") or consumer.get("feed_in_compensation")
             if kwh_price is not None:
                 try:
-                    self._prices["consumption"] = float(kwh_price)
+                    # API value is in cent/kWh; convert to €/kWh for statistics.
+                    self._prices["consumption"] = float(kwh_price) / 100
                 except (ValueError, TypeError):
                     pass
             if feed_in is not None:
                 try:
-                    self._prices["feed_in"] = float(feed_in)
+                    # API value is in cent/kWh; convert to €/kWh for statistics.
+                    self._prices["feed_in"] = float(feed_in) / 100
                 except (ValueError, TypeError):
                     pass
             _LOGGER.debug("Energy prices refreshed: %s", self._prices)
