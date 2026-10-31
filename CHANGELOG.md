@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-1.7.0...obi_energy_tracker-1.7.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **api,coordinator,live,sensor:** Add Origin header and fix price unit conversion ([5e60e7b](https://github.com/mla157/hacs-obienergytracker-integration/commit/5e60e7b0895952d286c9f3c4b2b6818dadb2f55e))
+
 ## [1.7.0](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-1.6.0...obi_energy_tracker-1.7.0) (2026-10-30)
 
 
