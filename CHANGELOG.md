@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-1.7.1...obi_energy_tracker-1.7.2) (2026-10-31)
+
+
+### Bug Fixes
+
+* **coordinator:** Refactor statistics computation and improve data handling ([29f3a7d](https://github.com/mla157/hacs-obienergytracker-integration/commit/29f3a7df043632ea6bb0ef00d97dcc4ac8eec850))
+
 ## [1.7.1](https://github.com/mla157/hacs-obienergytracker-integration/compare/obi_energy_tracker-1.7.0...obi_energy_tracker-1.7.1) (2026-10-31)
 
 
