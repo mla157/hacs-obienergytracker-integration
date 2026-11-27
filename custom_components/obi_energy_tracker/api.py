@@ -111,8 +111,8 @@ class ObiEnergyTrackerAPI:
             _LOGGER.error("Failed to retrieve access token: %s", err)
             return None
 
-    async def async_get_bridge_info(self) -> dict[str, Any] | None:
-        """Get bridge and device IDs, plus current device details."""
+    async def _async_fetch_user(self, version: str) -> dict[str, Any] | None:
+        """Fetch the user document in the given media type version."""
         try:
             token = await self.async_get_token()
             if not token:
@@ -125,7 +125,7 @@ class ObiEnergyTrackerAPI:
 
             url = f"{ENERGY_TRACKING_URL}/users/{account_id}"
             headers = {
-                "Accept": "application/vnd.obi.companion.energy-tracking.user.v1+json",
+                "Accept": f"application/vnd.obi.companion.energy-tracking.user.{version}+json",
                 "Accept-Encoding": "gzip",
                 "User-Agent": HA_USER_AGENT,
                 "Authorization": f"Bearer {token}",
@@ -134,51 +134,145 @@ class ObiEnergyTrackerAPI:
 
             async with self.session.get(url, headers=headers) as response:
                 if response.status != 200:
-                    _LOGGER.error("Failed to get bridge info: %d", response.status)
+                    _LOGGER.debug("User %s request failed: %d", version, response.status)
                     return None
-
                 data = await response.json()
-                bridges = data.get("bridges", [])
-                if not bridges and isinstance(data.get("bridge"), dict):
-                    bridges = [data["bridge"]]
-
-                if not bridges:
-                    _LOGGER.error("No bridges found in user data")
-                    return None
-
-                bridge = bridges[0]
-                self.bridge_id = bridge.get("id")
-
-                sensors = bridge.get("sensors", [])
-                selected_sensor = None
-
-                if self.device_id:
-                    selected_sensor = next(
-                        (s for s in sensors if s.get("id") == self.device_id), None
-                    )
-
-                if not selected_sensor and sensors:
-                    selected_sensor = sensors[0]
-
-                if selected_sensor:
-                    self.device_id = selected_sensor.get("id")
-
-                if not self.bridge_id or not self.device_id:
-                    _LOGGER.error("Could not find bridge_id or device_id")
-                    return None
-
-                sensor = selected_sensor or {}
-
-                return {
-                    "bridge_id": self.bridge_id,
-                    "device_id": self.device_id,
-                    "bridge_firmware_version": bridge.get("firmwareVersion"),
-                    "bridge_hardware_version": bridge.get("hardwareVersion"),
-                    **{key: sensor.get(key) for key in SENSOR_DETAIL_FIELDS},
-                }
+                return data if isinstance(data, dict) else None
         except (OSError, ClientError) as err:
             _LOGGER.error("Error getting bridge info: %s", err)
             return None
+
+    @staticmethod
+    def _bridges_of(data: dict[str, Any] | None) -> list[dict[str, Any]]:
+        if not data:
+            return []
+        bridges = data.get("bridges") or []
+        if not bridges and isinstance(data.get("bridge"), dict):
+            bridges = [data["bridge"]]
+        return [b for b in bridges if isinstance(b, dict)]
+
+    async def async_get_bridges(self) -> list[dict[str, Any]] | None:
+        """Return all bridges (each with its sensors) of the account.
+
+        user.v1 only carries a single "bridge"; user.v3 lists all of them as
+        "bridges" but lacks a few sensor fields (connectionStrength,
+        lastRecordReceivedAt), which are merged in from v1 where available.
+        """
+        v3 = self._bridges_of(await self._async_fetch_user("v3"))
+        v1 = self._bridges_of(await self._async_fetch_user("v1"))
+        if not v3:
+            if not v1:
+                _LOGGER.error("Failed to get bridge info")
+                return None
+            return v1
+
+        v1_sensors = {
+            s.get("id"): s
+            for b in v1
+            for s in b.get("sensors", []) or []
+            if isinstance(s, dict)
+        }
+        for bridge in v3:
+            for sensor in bridge.get("sensors", []) or []:
+                if not isinstance(sensor, dict):
+                    continue
+                legacy = v1_sensors.get(sensor.get("id"))
+                if legacy:
+                    for key, value in legacy.items():
+                        if sensor.get(key) is None:
+                            sensor[key] = value
+        return v3
+
+    async def async_list_sensors(self) -> list[dict[str, Any]] | None:
+        """Return every sensor of the account as {bridge_id, device_id, ...}."""
+        bridges = await self.async_get_bridges()
+        if bridges is None:
+            return None
+        result: list[dict[str, Any]] = []
+        for bridge in bridges:
+            for sensor in bridge.get("sensors", []) or []:
+                if isinstance(sensor, dict) and sensor.get("id") and bridge.get("id"):
+                    result.append(
+                        {
+                            "bridge_id": bridge.get("id"),
+                            "device_id": sensor.get("id"),
+                            "name": sensor.get("displayName")
+                            or bridge.get("displayName")
+                            or bridge.get("label"),
+                            "isOnline": sensor.get("isOnline"),
+                            "lastRecordReceivedAt": sensor.get("lastRecordReceivedAt"),
+                        }
+                    )
+        return result
+
+    async def async_get_bridge_info(self) -> dict[str, Any] | None:
+        """Get bridge and device IDs, plus current device details.
+
+        With a known device_id the sensor is looked up across ALL bridges of
+        the account, so an entry stays bound to its own sensor even when
+        further bridges are added. Without one, the first sensor (of the
+        configured bridge, else of the first bridge) is used.
+        """
+        bridges = await self.async_get_bridges()
+        if bridges is None:
+            return None
+        if not bridges:
+            _LOGGER.error("No bridges found in user data")
+            return None
+
+        bridge: dict[str, Any] | None = None
+        selected_sensor: dict[str, Any] | None = None
+
+        if self.device_id:
+            for candidate in bridges:
+                match = next(
+                    (
+                        s
+                        for s in candidate.get("sensors", []) or []
+                        if isinstance(s, dict) and s.get("id") == self.device_id
+                    ),
+                    None,
+                )
+                if match:
+                    bridge, selected_sensor = candidate, match
+                    break
+            if bridge is None:
+                # Never silently switch to another meter: that would mix two
+                # meters' readings in one entity and its statistics.
+                _LOGGER.error(
+                    "Configured sensor %s not found in any bridge of the account",
+                    self.device_id,
+                )
+                return None
+
+        if bridge is None and self.bridge_id:
+            bridge = next((b for b in bridges if b.get("id") == self.bridge_id), None)
+
+        if bridge is None:
+            bridge = bridges[0]
+
+        if selected_sensor is None:
+            sensors = [s for s in bridge.get("sensors", []) or [] if isinstance(s, dict)]
+            if sensors:
+                selected_sensor = sensors[0]
+
+        self.bridge_id = bridge.get("id")
+        if selected_sensor:
+            self.device_id = selected_sensor.get("id")
+
+        if not self.bridge_id or not self.device_id:
+            _LOGGER.error("Could not find bridge_id or device_id")
+            return None
+
+        sensor = selected_sensor or {}
+
+        return {
+            "bridge_id": self.bridge_id,
+            "device_id": self.device_id,
+            "bridge_firmware_version": bridge.get("firmwareVersion"),
+            "bridge_hardware_version": bridge.get("hardwareVersion"),
+            **{key: sensor.get(key) for key in SENSOR_DETAIL_FIELDS},
+        }
 
     async def async_get_device_info(self) -> dict[str, Any] | None:
         """Get current device details from the bridge info response."""

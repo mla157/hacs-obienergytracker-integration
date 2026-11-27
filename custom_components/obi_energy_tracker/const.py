@@ -8,6 +8,10 @@ DOMAIN = "obi_energy_tracker"
 CONF_COUNTRY = "country"
 CONF_BRIDGE_ID = "bridge_id"
 CONF_DEVICE_ID = "device_id"
+# Entries created with multi-sensor support suffix entity unique IDs with the
+# sensor ID, so several sensors (bridges) of one account can coexist. Entries
+# created before keep their unsuffixed IDs and therefore their history.
+CONF_SCOPED_IDS = "scoped_unique_ids"
 
 # Default values
 DEFAULT_COUNTRY = "DE"

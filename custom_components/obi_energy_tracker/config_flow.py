@@ -17,7 +17,13 @@ from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow
 
 from .api import ObiEnergyTrackerAPI, extract_account_id, extract_jwt_claims
-from .const import CONF_BRIDGE_ID, CONF_DEVICE_ID, DOMAIN, OAUTH2_SCOPES
+from .const import (
+    CONF_BRIDGE_ID,
+    CONF_DEVICE_ID,
+    CONF_SCOPED_IDS,
+    DOMAIN,
+    OAUTH2_SCOPES,
+)
 from .oauth2 import KeycloakOAuth2Implementation, async_revoke_session
 from .session import async_create_obi_session
 
@@ -70,6 +76,9 @@ class ObiEnergyTrackerConfigFlow(
             return self.async_abort(reason="oauth_error")
 
         account_id = extract_account_id(access_token)
+        reauth_entry = (
+            self._get_reauth_entry() if self.source == SOURCE_REAUTH else None
+        )
 
         # Test the connection and discover bridge/device IDs.
         # Use the custom session to avoid the OBI CDN ALPN issue.
@@ -82,21 +91,54 @@ class ObiEnergyTrackerConfigFlow(
             api = ObiEnergyTrackerAPI(
                 session=session,
                 token_provider=_static_token,
+                # On reauth stay bound to the entry's own sensor, so an
+                # account with several bridges never swaps meters.
+                bridge_id=reauth_entry.data.get(CONF_BRIDGE_ID) if reauth_entry else None,
+                device_id=reauth_entry.data.get(CONF_DEVICE_ID) if reauth_entry else None,
             )
 
-            info = await api.async_get_bridge_info()
+            if reauth_entry is None:
+                sensors = await api.async_list_sensors()
+                info = None
+            else:
+                sensors = None
+                info = await api.async_get_bridge_info()
         finally:
             await session.close()
+
+        if reauth_entry is None:
+            if sensors is None:
+                return self.async_abort(reason="cannot_connect")
+            configured = {
+                entry.data.get(CONF_DEVICE_ID)
+                for entry in self._async_current_entries(include_ignore=False)
+            }
+            available = [s for s in sensors if s["device_id"] not in configured]
+            if not available:
+                return self.async_abort(reason="already_configured")
+            self._oauth_data = data
+            self._available_sensors = available
+            if len(available) == 1:
+                return await self._async_create_sensor_entry(available[0])
+            return await self.async_step_pick_sensor()
+
         if not info:
-            return self.async_abort(reason="cannot_connect")
+            # Sensor of this entry not found: wrong account or OBI unreachable.
+            return self.async_abort(reason="wrong_account")
 
         data[CONF_BRIDGE_ID] = info["bridge_id"]
         data[CONF_DEVICE_ID] = info["device_id"]
 
+        if reauth_entry.data.get(CONF_SCOPED_IDS):
+            # Per-sensor entry: unique_id is the sensor ID, which was just
+            # verified to belong to the account that logged in.
+            data[CONF_SCOPED_IDS] = True
+            await self.async_set_unique_id(reauth_entry.unique_id)
+            return self.async_update_reload_and_abort(reauth_entry, data=data)
+
         unique_id = account_id or info["device_id"]
 
-        if self.source == SOURCE_REAUTH:
-            reauth_entry = self._get_reauth_entry()
+        if reauth_entry is not None:
             is_legacy = (
                 "token" not in reauth_entry.data
                 or "@" in str(reauth_entry.unique_id)
@@ -147,14 +189,51 @@ class ObiEnergyTrackerConfigFlow(
             self._abort_if_unique_id_mismatch(reason="wrong_account")
             return self.async_update_reload_and_abort(reauth_entry, data=data)
 
-        if unique_id:
-            await self.async_set_unique_id(unique_id)
-            self._abort_if_unique_id_configured()
-        else:
-            self._async_abort_entries_match()
+        return self.async_abort(reason="oauth_error")
 
+    async def async_step_pick_sensor(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user choose which sensor (bridge) this entry is for."""
+        by_id = {s["device_id"]: s for s in self._available_sensors}
+        if user_input is not None:
+            return await self._async_create_sensor_entry(by_id[user_input["sensor"]])
+
+        def _label(sensor: dict[str, Any]) -> str:
+            state = {True: "online", False: "offline"}.get(sensor.get("isOnline"), "?")
+            last = str(sensor.get("lastRecordReceivedAt") or "-")[:16].replace("T", " ")
+            return (
+                f"{sensor.get('name') or 'Sensor'} …{str(sensor['device_id'])[-6:]} "
+                f"(Bridge …{str(sensor['bridge_id'])[-6:]}, {state}, {last})"
+            )
+
+        return self.async_show_form(
+            step_id="pick_sensor",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("sensor"): vol.In(
+                        {device_id: _label(s) for device_id, s in by_id.items()}
+                    )
+                }
+            ),
+        )
+
+    async def _async_create_sensor_entry(
+        self, sensor: dict[str, Any]
+    ) -> ConfigFlowResult:
+        """Create a per-sensor entry with sensor-scoped unique IDs."""
+        await self.async_set_unique_id(sensor["device_id"])
+        self._abort_if_unique_id_configured()
+        data = {
+            **self._oauth_data,
+            CONF_BRIDGE_ID: sensor["bridge_id"],
+            CONF_DEVICE_ID: sensor["device_id"],
+            CONF_SCOPED_IDS: True,
+        }
         return self.async_create_entry(
-            title="OBI Energy Tracker",
+            title=(
+                f"OBI Energy Tracker ({sensor.get('name') or '…' + str(sensor['device_id'])[-6:]})"
+            ),
             data=data,
         )
 

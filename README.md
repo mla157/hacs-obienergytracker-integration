@@ -28,6 +28,12 @@ Setting up the integration uses standard **OAuth2 with PKCE** via `auth.obi.com`
 4. Log in with your OBI account.
 5. Home Assistant is granted access without storing your password.
 
+### Multiple Energy Trackers in one account
+
+If your OBI account has more than one Energy Tracker (several bridges, e.g. one per meter), add the integration once per tracker: **Settings** -> **Devices & Services** -> **OBI Energy Tracker** -> **Add hub**, then log in again with the same account. Trackers that are already set up are skipped; if more than one is left, you pick the one this entry is for.
+
+Each entry stays bound to its own sensor, so adding another bridge to the account never switches an existing entry to a different meter. Entries created before this feature keep their entity IDs and history.
+
 ## API Details
 
 The integration retrieves:

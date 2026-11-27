@@ -24,7 +24,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from .api import STANDBY_INTERVALS, ObiEnergyTrackerAPI
-from .const import DOMAIN, LIVE_TIMEOUT
+from .const import CONF_SCOPED_IDS, DOMAIN, LIVE_TIMEOUT
 from .live import ObiLiveMode
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,6 +59,18 @@ class ObiEnergyTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._prices: dict[str, float] = {}
         self._firmware_data: dict[str, Any] | None = None
         self._feed_in_last: float = 0.0
+
+    def scoped_unique_id(self, base: str) -> str:
+        """Return an entity unique ID, suffixed with the sensor ID if needed.
+
+        Entries created with multi-sensor support carry CONF_SCOPED_IDS; their
+        entities get the sensor ID appended so several sensors can coexist.
+        Older entries keep the plain IDs and with them their entity history.
+        """
+        entry = self.config_entry
+        if entry is not None and entry.data.get(CONF_SCOPED_IDS):
+            return f"{base}_{slugify(self.api.device_id or 'sensor')}"
+        return base
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API.

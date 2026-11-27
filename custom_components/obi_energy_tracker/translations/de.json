@@ -4,13 +4,20 @@
       "pick_implementation": {
         "title": "OBI Energy Tracker"
       },
+      "pick_sensor": {
+        "title": "Energy-Tracker-Sensor wählen",
+        "description": "Dieses OBI-Konto hat mehrere Sensoren (Bridges). Für welchen soll dieser Eintrag sein? Bereits eingerichtete Sensoren werden nicht angezeigt.",
+        "data": {
+          "sensor": "Sensor"
+        }
+      },
       "reauth_confirm": {
         "title": "OBI Energy Tracker neu authentifizieren",
         "description": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut über OBI an, um fortzufahren."
       }
     },
     "abort": {
-      "already_configured": "Dieses OBI-Konto ist in Home Assistant bereits eingerichtet",
+      "already_configured": "Alle Sensoren dieses OBI-Kontos sind in Home Assistant bereits eingerichtet",
       "cannot_connect": "Der OBI Energy Tracker Dienst ist nicht erreichbar. Bitte die Internetverbindung prüfen.",
       "oauth_error": "Ungültige Authentifizierungs-Token von OBI empfangen.",
       "wrong_account": "Bitte melden Sie sich mit demselben OBI-Konto an, mit dem diese Integration eingerichtet wurde.",
