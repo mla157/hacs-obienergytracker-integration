@@ -38,6 +38,7 @@ class ObiLiveModeSwitch(SwitchEntity):
     def __init__(self, coordinator: ObiEnergyTrackerCoordinator) -> None:
         """Initialize the switch."""
         self._live = coordinator.live
+        self._attr_unique_id = coordinator.scoped_unique_id(self._attr_unique_id)
         device_id = coordinator.api.device_id or "sensor"
         bridge_id = coordinator.api.bridge_id
         device_info: dict[str, Any] = {
